@@ -1,0 +1,37 @@
+# .NET
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# NuGet
+*.nupkg
+packages/
+
+# Test Results
+TestResults/
+*.trx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+docs/
+
+Scripts/
+
+Dashboard_API_Report.md

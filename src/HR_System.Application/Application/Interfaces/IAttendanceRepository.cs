@@ -1,0 +1,17 @@
+using HR_System.Application.DTOs.Attendance;
+using HR_System.Domain.Entities;
+
+namespace HR_System.Application.Interfaces;
+
+public interface IAttendanceRepository
+{
+    Task<AttendanceDto?> GetByEmployeeAndDateAsync(int employeeId, DateTime date);
+    Task<AttendanceRecord> CreateAsync(AttendanceRecord record);
+    Task<AttendanceRecord> UpdateAsync(AttendanceRecord record);
+    Task<decimal> GetAttendanceRateAsync();
+
+    Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit);
+    Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId);
+    Task<(int CheckedIn, int Late)> GetTodayStatsAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
+    Task<int> GetActiveEmployeeCountAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
+}
