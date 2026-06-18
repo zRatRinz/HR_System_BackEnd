@@ -18,7 +18,7 @@ public class LeaveApprovalHistoryRepository : BaseRepository, ILeaveApprovalHist
 
         var newId = await ExecuteScalarAsync<int>(sql, new
         {
-            LeaveRequestId = history.LeaveRequestId.ToString(),
+            LeaveRequestId = history.LeaveRequestId,
             history.StepNumber,
             history.ApproverRole,
             history.ApproverId,
@@ -32,7 +32,7 @@ public class LeaveApprovalHistoryRepository : BaseRepository, ILeaveApprovalHist
         return history;
     }
 
-    public async Task<List<LeaveApprovalHistory>> GetByLeaveRequestIdAsync(Guid leaveRequestId)
+    public async Task<List<LeaveApprovalHistory>> GetByLeaveRequestIdAsync(int leaveRequestId)
     {
         var sql = @"
             SELECT Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
@@ -40,11 +40,11 @@ public class LeaveApprovalHistoryRepository : BaseRepository, ILeaveApprovalHist
             WHERE LeaveRequestId = @LeaveRequestId
             ORDER BY StepNumber";
 
-        var results = await QueryAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId.ToString() });
+        var results = await QueryAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
         return results.ToList();
     }
 
-    public async Task<LeaveApprovalHistory?> GetCurrentStepAsync(Guid leaveRequestId)
+    public async Task<LeaveApprovalHistory?> GetCurrentStepAsync(int leaveRequestId)
     {
         var sql = @"
             SELECT TOP 1 Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
@@ -52,10 +52,10 @@ public class LeaveApprovalHistoryRepository : BaseRepository, ILeaveApprovalHist
             WHERE LeaveRequestId = @LeaveRequestId AND Status = 'Pending'
             ORDER BY StepNumber";
 
-        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId.ToString() });
+        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
     }
 
-    public async Task<LeaveApprovalHistory?> GetLatestStepAsync(Guid leaveRequestId)
+    public async Task<LeaveApprovalHistory?> GetLatestStepAsync(int leaveRequestId)
     {
         var sql = @"
             SELECT TOP 1 Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
@@ -63,7 +63,7 @@ public class LeaveApprovalHistoryRepository : BaseRepository, ILeaveApprovalHist
             WHERE LeaveRequestId = @LeaveRequestId
             ORDER BY StepNumber DESC";
 
-        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId.ToString() });
+        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
     }
 
     public async Task UpdateAsync(LeaveApprovalHistory history)

@@ -112,7 +112,7 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         return results.ToList();
     }
 
-    public async Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId)
+    public async Task<(List<AttendanceDto> Items, int Total)> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId, string? status)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
@@ -129,24 +129,39 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
             parameters.Add("EmployeeId", employeeId.Value);
         }
 
-        if (!bypassScope)
+        if (!string.IsNullOrEmpty(status))
         {
-            if (scopeEmployeeId.HasValue)
-            {
-                whereClause += " AND a.EmployeeId = @ScopeEmployeeId";
-                parameters.Add("ScopeEmployeeId", scopeEmployeeId.Value);
-            }
-            else if (scopeDepartmentId.HasValue)
+            whereClause += " AND a.Status = @Status";
+            parameters.Add("Status", status);
+        }
+
+        if (scopeEmployeeId.HasValue)
+        {
+            whereClause += " AND a.EmployeeId = @ScopeEmployeeId";
+            parameters.Add("ScopeEmployeeId", scopeEmployeeId.Value);
+        }
+        else
+        {
+            if (scopeDepartmentId.HasValue)
             {
                 whereClause += " AND e.DepartmentId = @DepartmentId";
                 parameters.Add("DepartmentId", scopeDepartmentId.Value);
             }
-            else if (scopeDivisionId.HasValue)
+
+            if (scopeDivisionId.HasValue)
             {
                 whereClause += " AND e.DivisionId = @DivisionId";
                 parameters.Add("DivisionId", scopeDivisionId.Value);
             }
         }
+
+        var countSql = $@"
+            SELECT COUNT(*)
+            FROM AttendanceRecords a
+            INNER JOIN Employees e ON a.EmployeeId = e.EmployeeId
+            {whereClause}";
+
+        var total = await ExecuteScalarAsync<int>(countSql, parameters);
 
         var sql = $@"
             SELECT a.AttendanceRecordId, a.EmployeeId, a.Date, a.CheckIn, a.CheckOut,
@@ -162,7 +177,44 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         parameters.Add("Limit", limit);
 
         var results = await QueryAsync<AttendanceDto>(sql, parameters);
-        return results.ToList();
+        return (results.ToList(), total);
+    }
+
+    public async Task<(List<AttendanceDto> Items, int Total)> GetByEmployeeIdAsync(int employeeId, DateTime? date, int page, int limit)
+    {
+        var whereClause = "WHERE a.EmployeeId = @EmployeeId";
+        var parameters = new DynamicParameters();
+        parameters.Add("EmployeeId", employeeId);
+
+        if (date.HasValue)
+        {
+            whereClause += " AND CAST(a.Date AS DATE) = CAST(@Date AS DATE)";
+            parameters.Add("Date", date.Value);
+        }
+
+        var countSql = $@"
+            SELECT COUNT(*)
+            FROM AttendanceRecords a
+            INNER JOIN Employees e ON a.EmployeeId = e.EmployeeId
+            {whereClause}";
+
+        var total = await ExecuteScalarAsync<int>(countSql, parameters);
+
+        var sql = $@"
+            SELECT a.AttendanceRecordId, a.EmployeeId, a.Date, a.CheckIn, a.CheckOut,
+                   a.Status,
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM AttendanceRecords a
+            INNER JOIN Employees e ON a.EmployeeId = e.EmployeeId
+            {whereClause}
+            ORDER BY a.Date DESC
+            OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY";
+
+        parameters.Add("Offset", (page - 1) * limit);
+        parameters.Add("Limit", limit);
+
+        var results = await QueryAsync<AttendanceDto>(sql, parameters);
+        return (results.ToList(), total);
     }
 
     public async Task<(int CheckedIn, int Late)> GetTodayStatsAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope)

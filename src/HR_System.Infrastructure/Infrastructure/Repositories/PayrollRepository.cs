@@ -89,7 +89,7 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
             CreatedAt = DateTime.UtcNow
         });
 
-        record.Id = Guid.Parse(newId.ToString());
+        record.Id = newId;
         return record;
     }
 

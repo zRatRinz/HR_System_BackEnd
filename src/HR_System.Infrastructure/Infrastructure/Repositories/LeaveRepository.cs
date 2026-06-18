@@ -1,4 +1,4 @@
-﻿using HR_System.Application.DTOs.Leave;
+using HR_System.Application.DTOs.Leave;
 using HR_System.Application.Interfaces;
 using HR_System.Domain.Entities;
 using HR_System.Domain.Enums;
@@ -11,7 +11,7 @@ public class LeaveRepository : BaseRepository, ILeaveRepository
 {
     public LeaveRepository(IConfiguration configuration) : base(configuration) { }
 
-public async Task<LeaveRequest?> GetByIdAsync(Guid id)
+public async Task<LeaveRequest?> GetByIdAsync(int id)
     {
         var sql = @"
             SELECT l.LeaveRequestId, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
@@ -148,13 +148,13 @@ public async Task<LeaveRequest?> GetByIdAsync(Guid id)
             LeaveType = leaveRequest.LeaveType.ToString(),
             leaveRequest.StartDate,
             leaveRequest.EndDate,
-            leaveRequest.Days,
+            TotalDays = leaveRequest.Days,
             leaveRequest.Reason,
             Status = leaveRequest.Status.ToString(),
             CreatedAt = DateTime.UtcNow
         });
 
-        leaveRequest.Id = Guid.Parse(newId.ToString());
+        leaveRequest.Id = newId;
         return leaveRequest;
     }
 
@@ -173,7 +173,7 @@ public async Task<LeaveRequest?> GetByIdAsync(Guid id)
             LeaveType = leaveRequest.LeaveType.ToString(),
             leaveRequest.StartDate,
             leaveRequest.EndDate,
-            leaveRequest.Days,
+            TotalDays = leaveRequest.Days,
             leaveRequest.Reason,
             Status = leaveRequest.Status.ToString(),
             ApprovedBy = leaveRequest.ApprovedBy?.ToString(),
@@ -248,17 +248,17 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
         return results.Select(MapToLeaveRequest).ToList();
     }
 
-    public async Task<LeaveRequestDto?> GetByIdAsDtoAsync(Guid id)
+    public async Task<LeaveRequestDto?> GetByIdAsDtoAsync(int id)
     {
         var sql = @"
-            SELECT l.LeaveRequestId as Id, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
-                   l.TotalDays, l.Reason, l.Status, l.CreatedAt,
+            SELECT l.LeaveRequestId as LeaveRequestId, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
+                   l.TotalDays as Days, l.Reason, l.Status, l.CreatedAt,
                    (e.FirstName + ' ' + e.LastName) as EmployeeName
             FROM LeaveRequests l
             INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId
             WHERE l.LeaveRequestId = @LeaveRequestId";
 
-        return await QuerySingleOrDefaultAsync<LeaveRequestDto>(sql, new { LeaveRequestId = id.ToString() });
+        return await QuerySingleOrDefaultAsync<LeaveRequestDto>(sql, new { LeaveRequestId = id });
     }
 
     public async Task<(List<LeaveRequestDto> Items, int Total)> GetAllAsDtoAsync(string? status, int? employeeId, int page, int limit)
@@ -282,8 +282,56 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
         var total = await ExecuteScalarAsync<int>(countSql, parameters);
 
         var sql = $@"
-            SELECT l.LeaveRequestId as Id, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
-                   l.TotalDays, l.Reason, l.Status, l.CreatedAt,
+            SELECT l.LeaveRequestId as LeaveRequestId, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
+                   l.TotalDays as Days, l.Reason, l.Status, l.CreatedAt,
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM LeaveRequests l
+            INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId
+            {whereClause}
+            ORDER BY l.CreatedAt DESC
+            OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY";
+
+        parameters.Add("Offset", (page - 1) * limit);
+        parameters.Add("Limit", limit);
+
+        var results = await QueryAsync<LeaveRequestDto>(sql, parameters);
+        return (results.ToList(), total);
+    }
+
+    public async Task<(List<LeaveRequestDto> Items, int Total)> GetAllAsDtoAsync(string? status, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope)
+    {
+        var whereClause = "WHERE 1=1";
+        var parameters = new DynamicParameters();
+
+        if (scopeDepartmentId.HasValue)
+        {
+            whereClause += " AND e.DepartmentId = @ScopeDepartmentId";
+            parameters.Add("ScopeDepartmentId", scopeDepartmentId.Value);
+        }
+        else if (scopeDivisionId.HasValue)
+        {
+            whereClause += " AND e.DivisionId = @ScopeDivisionId";
+            parameters.Add("ScopeDivisionId", scopeDivisionId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            whereClause += " AND l.Status = @Status";
+            parameters.Add("Status", status);
+        }
+
+        if (employeeId.HasValue)
+        {
+            whereClause += " AND l.EmployeeId = @EmployeeId";
+            parameters.Add("EmployeeId", employeeId.Value);
+        }
+
+        var countSql = $"SELECT COUNT(*) FROM LeaveRequests l INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId {whereClause}";
+        var total = await ExecuteScalarAsync<int>(countSql, parameters);
+
+        var sql = $@"
+            SELECT l.LeaveRequestId as LeaveRequestId, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
+                   l.TotalDays as Days, l.Reason, l.Status, l.CreatedAt,
                    (e.FirstName + ' ' + e.LastName) as EmployeeName
             FROM LeaveRequests l
             INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId
@@ -322,7 +370,29 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
         return results.ToDictionary(r => r.LeaveType, r => r.TotalDays);
     }
 
-    public async Task UpdateStatusAsync(Guid id, string status)
+    public async Task<int> GetPendingRequestsCountAsync(int employeeId)
+    {
+        var sql = @"
+            SELECT COUNT(*)
+            FROM LeaveRequests
+            WHERE EmployeeId = @EmployeeId AND Status = 'Pending'";
+
+        return await ExecuteScalarAsync<int>(sql, new { EmployeeId = employeeId });
+    }
+
+    public async Task<int> GetLeaveTakenYtdAsync(int employeeId)
+    {
+        var sql = @"
+            SELECT ISNULL(SUM(TotalDays), 0)
+            FROM LeaveRequests
+            WHERE EmployeeId = @EmployeeId
+              AND Status = 'Approved'
+              AND YEAR(CreatedAt) = @Year";
+
+        return await ExecuteScalarAsync<int>(sql, new { EmployeeId = employeeId, Year = DateTime.UtcNow.Year });
+    }
+
+    public async Task UpdateStatusAsync(int id, string status)
     {
         var sql = @"
             UPDATE LeaveRequests
@@ -354,21 +424,27 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
             DivisionId = dto.DivisionId,
             DepartmentId = dto.DepartmentId,
             PositionId = dto.PositionId,
-            Status = Enum.Parse<EmployeeStatus>(dto.EmpStatus, true),
+            Status = Enum.TryParse<EmployeeStatus>(dto.EmpStatus, true, out var empStatus)
+                ? empStatus
+                : EmployeeStatus.Active,
             CreatedAt = dto.EmpCreatedAt ?? DateTime.UtcNow,
             UpdatedAt = dto.EmpUpdatedAt
         };
 
         return new LeaveRequest
         {
-            Id = Guid.Parse(dto.LeaveRequestId.ToString()),
+            Id = dto.LeaveRequestId,
             EmployeeId = dto.EmployeeId,
-            LeaveType = Enum.Parse<LeaveType>(dto.LeaveType, true),
+            LeaveType = Enum.TryParse<LeaveType>(dto.LeaveType, true, out var leaveType)
+                ? leaveType
+                : LeaveType.Annual,
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
             Days = dto.TotalDays,
             Reason = dto.Reason,
-            Status = Enum.Parse<LeaveStatus>(dto.Status, true),
+            Status = Enum.TryParse<LeaveStatus>(dto.Status, true, out var leaveStatus)
+                ? leaveStatus
+                : LeaveStatus.Pending,
             ApprovedBy = dto.ApprovedBy,
             ApprovedAt = dto.ApprovedAt,
             CreatedAt = dto.CreatedAt,
@@ -403,3 +479,4 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
         public string Name { get; set; } = "";
     }
 }
+
