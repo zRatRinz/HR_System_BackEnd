@@ -2,7 +2,7 @@ namespace HR_System.Application.DTOs.Payroll;
 
 public class PayrollDto
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public string Period { get; set; } = string.Empty;

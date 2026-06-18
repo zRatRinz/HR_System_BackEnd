@@ -58,6 +58,71 @@ public class LeaveUseCase
         };
     }
 
+    public async Task<LeaveListResponse> GetMyLeavesAsync(string? status, int page, int limit)
+    {
+        var employeeId = _scopeService.GetEmployeeId();
+        if (!employeeId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Employee not found in token");
+        }
+
+        var (items, total) = await _leaveRepository.GetAllAsDtoAsync(status, employeeId.Value, page, limit);
+        return new LeaveListResponse
+        {
+            Requests = items,
+            Total = total,
+            Page = page,
+            Limit = limit
+        };
+    }
+
+    public async Task<LeaveListResponse> GetTeamLeavesAsync(string? status, int? employeeId, int? divisionId, int? departmentId, int page, int limit)
+    {
+        var roles = _scopeService.GetRoles();
+        var bypassScope = roles.Any(r => r == "Admin" || r == "HR" || r == "Manager");
+
+        int? scopeDivisionId;
+        int? scopeDepartmentId;
+
+        if (!bypassScope)
+        {
+            var tokenDivisionId = _scopeService.GetDivisionId();
+            var tokenDepartmentId = _scopeService.GetDepartmentId();
+
+            if ((divisionId.HasValue && divisionId != tokenDivisionId) ||
+                (departmentId.HasValue && departmentId != tokenDepartmentId))
+            {
+                return new LeaveListResponse
+                {
+                    Requests = new List<LeaveRequestDto>(),
+                    Total = 0,
+                    Page = page,
+                    Limit = limit
+                };
+            }
+
+            scopeDivisionId = tokenDivisionId;
+            scopeDepartmentId = tokenDepartmentId;
+        }
+        else
+        {
+            scopeDivisionId = divisionId;
+            scopeDepartmentId = departmentId;
+        }
+
+        var (items, total) = await _leaveRepository.GetAllAsDtoAsync(
+            status, employeeId, page, limit,
+            scopeDivisionId, scopeDepartmentId, bypassScope);
+
+        return new LeaveListResponse
+        {
+            Requests = items,
+            Total = total,
+            Page = page,
+            Limit = limit
+        };
+    }
+
     public async Task<LeaveRequestDto> CreateAsync(int employeeId, CreateLeaveRequest request)
     {
         var employee = await _employeeRepository.GetByIdAsDtoAsync(employeeId);
@@ -66,11 +131,37 @@ public class LeaveUseCase
             throw new KeyNotFoundException("Employee not found");
         }
 
+        int approverEmployeeId;
+        var headDeptId = await _employeeRepository.GetHeadOfDepartmentEmployeeIdAsync(employee.DepartmentId);
+        if (headDeptId.HasValue)
+        {
+            approverEmployeeId = headDeptId.Value;
+        }
+        else
+        {
+            var headDivId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
+            if (headDivId.HasValue)
+            {
+                approverEmployeeId = headDivId.Value;
+            }
+            else
+            {
+                var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
+                if (hrId.HasValue)
+                {
+                    approverEmployeeId = hrId.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException("No approver found in the system");
+                }
+            }
+        }
+
         var days = (int)(request.EndDate - request.StartDate).TotalDays + 1;
 
         var leaveRequest = new LeaveRequest
         {
-            Id = Guid.NewGuid(),
             EmployeeId = employeeId,
             LeaveType = Enum.Parse<LeaveType>(request.LeaveType, true),
             StartDate = request.StartDate,
@@ -85,12 +176,11 @@ public class LeaveUseCase
 
         var approvalItem = new ApprovalItem
         {
-            Id = Guid.NewGuid(),
-            Type = ApprovalType.Leave,
-            EmployeeId = employeeId,
-            Title = $"{request.LeaveType} Leave",
-            Detail = $"{request.StartDate:yyyy-MM-dd} to {request.EndDate:yyyy-MM-dd} ({days} days)",
-            Status = ApprovalStatus.Pending,
+            LeaveRequestId = leaveRequest.Id,
+            RequesterEmployeeId = employeeId,
+            ApproverEmployeeId = approverEmployeeId,
+            Type = "Leave",
+            Status = "Pending",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -98,7 +188,7 @@ public class LeaveUseCase
 
         return new LeaveRequestDto
         {
-            Id = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.Id,
             EmployeeId = employeeId,
             EmployeeName = employee.Name,
             LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
@@ -110,7 +200,7 @@ public class LeaveUseCase
         };
     }
 
-    public async Task<LeaveRequestDto> UpdateStatusAsync(Guid id, UpdateLeaveRequest request)
+    public async Task<LeaveRequestDto> UpdateStatusAsync(int id, UpdateLeaveRequest request)
     {
         var leaveRequestDto = await _leaveRepository.GetByIdAsDtoAsync(id);
         if (leaveRequestDto == null)
@@ -135,7 +225,7 @@ public class LeaveUseCase
     {
         return new LeaveRequestDto
         {
-            Id = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.Id,
             EmployeeId = leaveRequest.EmployeeId,
             EmployeeName = "",
             LeaveType = leaveRequest.LeaveType.ToString().ToLower(),

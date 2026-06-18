@@ -2,7 +2,7 @@ namespace HR_System.Application.DTOs.Leave;
 
 public class LeaveRequestDto
 {
-    public Guid Id { get; set; }
+    public int LeaveRequestId { get; set; }
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public string LeaveType { get; set; } = string.Empty;

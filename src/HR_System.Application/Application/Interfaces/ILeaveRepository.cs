@@ -13,10 +13,13 @@ public interface ILeaveRepository
     Task<int> GetOnLeaveCountTodayWithScopeAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
     Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, DateTime endDate);
 
-    Task<LeaveRequestDto?> GetByIdAsDtoAsync(Guid id);
+    Task<LeaveRequestDto?> GetByIdAsDtoAsync(int id);
     Task<(List<LeaveRequestDto> Items, int Total)> GetAllAsDtoAsync(string? status, int? employeeId, int page, int limit);
+    Task<(List<LeaveRequestDto> Items, int Total)> GetAllAsDtoAsync(string? status, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
     Task<Dictionary<string, int>> GetUsedDaysByTypeAsync(int employeeId);
     Task<Dictionary<string, int>> GetPendingDaysByTypeAsync(int employeeId);
-    Task<LeaveRequest?> GetByIdAsync(Guid id);
-    Task UpdateStatusAsync(Guid id, string status);
+    Task<int> GetPendingRequestsCountAsync(int employeeId);
+    Task<int> GetLeaveTakenYtdAsync(int employeeId);
+    Task<LeaveRequest?> GetByIdAsync(int id);
+    Task UpdateStatusAsync(int id, string status);
 }

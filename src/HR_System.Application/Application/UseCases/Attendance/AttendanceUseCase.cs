@@ -44,11 +44,81 @@ public class AttendanceUseCase
             }
         }
 
-        var items = await _attendanceRepository.GetAllAsDtoAsync(
+        var (items, total) = await _attendanceRepository.GetAllAsDtoAsync(
             date, employeeId, page, limit,
             divisionId, departmentId, bypassScope,
-            scopeEmployeeId);
-        var total = items.Count;
+            scopeEmployeeId, null);
+
+        return new AttendanceListResponse
+        {
+            Attendance = items,
+            Total = total,
+            Page = page
+        };
+    }
+
+    public async Task<AttendanceListResponse> GetMyAttendanceAsync(DateTime? date, int page, int limit)
+    {
+        var employeeId = _scopeService.GetEmployeeId();
+        if (!employeeId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Employee not found in token");
+        }
+
+        var (items, total) = await _attendanceRepository.GetByEmployeeIdAsync(employeeId.Value, date, page, limit);
+
+        return new AttendanceListResponse
+        {
+            Attendance = items,
+            Total = total,
+            Page = page
+        };
+    }
+
+    public async Task<AttendanceListResponse> GetTeamAttendanceAsync(
+        DateTime? date,
+        int? employeeId,
+        string? status,
+        int? divisionId,
+        int? departmentId,
+        int page,
+        int limit)
+    {
+        var roles = _scopeService.GetRoles();
+        var bypassScope = roles.Any(r => r == "Admin" || r == "HR" || r == "Manager");
+
+        int? scopeDivisionId;
+        int? scopeDepartmentId;
+
+        if (!bypassScope)
+        {
+            var tokenDivisionId = _scopeService.GetDivisionId();
+            var tokenDepartmentId = _scopeService.GetDepartmentId();
+
+            if ((divisionId.HasValue && divisionId != tokenDivisionId) ||
+                (departmentId.HasValue && departmentId != tokenDepartmentId))
+            {
+                return new AttendanceListResponse
+                {
+                    Attendance = new List<AttendanceDto>(),
+                    Total = 0,
+                    Page = page
+                };
+            }
+
+            scopeDivisionId = tokenDivisionId;
+            scopeDepartmentId = tokenDepartmentId;
+        }
+        else
+        {
+            scopeDivisionId = divisionId;
+            scopeDepartmentId = departmentId;
+        }
+
+        var (items, total) = await _attendanceRepository.GetAllAsDtoAsync(
+            date, employeeId, page, limit,
+            scopeDivisionId, scopeDepartmentId, bypassScope,
+            null, status);
 
         return new AttendanceListResponse
         {

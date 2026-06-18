@@ -2,7 +2,7 @@ namespace HR_System.Application.DTOs.Leave;
 
 public class LeaveTimelineDto
 {
-    public Guid LeaveRequestId { get; set; }
+    public int LeaveRequestId { get; set; }
     public List<LeaveApprovalStepDto> Steps { get; set; } = new();
 }
 

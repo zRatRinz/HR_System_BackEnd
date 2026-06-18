@@ -10,18 +10,21 @@ public class LeaveApprovalUseCase
     private readonly ILeaveRepository _leaveRepository;
     private readonly ILeaveApprovalHistoryRepository _approvalHistoryRepository;
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly IApprovalRepository _approvalRepository;
 
     public LeaveApprovalUseCase(
         ILeaveRepository leaveRepository,
         ILeaveApprovalHistoryRepository approvalHistoryRepository,
-        IEmployeeRepository employeeRepository)
+        IEmployeeRepository employeeRepository,
+        IApprovalRepository approvalRepository)
     {
         _leaveRepository = leaveRepository;
         _approvalHistoryRepository = approvalHistoryRepository;
         _employeeRepository = employeeRepository;
+        _approvalRepository = approvalRepository;
     }
 
-    public async Task<LeaveRequestDto> ApproveAsync(Guid leaveRequestId, string approverRole, int approverId, string? comment)
+    public async Task<LeaveRequestDto> ApproveAsync(int leaveRequestId, string approverRole, int approverId, string? comment)
     {
         var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
         if (leaveRequest == null)
@@ -78,17 +81,56 @@ public class LeaveApprovalUseCase
 
         await _approvalHistoryRepository.CreateAsync(history);
 
+        await _approvalRepository.UpdateAsync(new ApprovalItem
+        {
+            LeaveRequestId = leaveRequestId,
+            RequesterEmployeeId = leaveRequest.EmployeeId,
+            ApproverEmployeeId = approverId,
+            Type = "Leave",
+            Status = "Approved",
+            Comment = comment
+        });
+
         if (nextStepNumber == 3)
         {
             await _leaveRepository.UpdateStatusAsync(leaveRequestId, LeaveStatus.Approved.ToString());
         }
+        else
+        {
+            int? nextApproverEmployeeId = null;
+            if (nextStepNumber == 2)
+            {
+                var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
+                if (employee != null)
+                {
+                    nextApproverEmployeeId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
+                }
+            }
+            else if (nextStepNumber == 3)
+            {
+                nextApproverEmployeeId = await _employeeRepository.GetHrEmployeeIdAsync();
+            }
 
-        var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
+            if (nextApproverEmployeeId.HasValue)
+            {
+                await _approvalRepository.CreateAsync(new ApprovalItem
+                {
+                    LeaveRequestId = leaveRequestId,
+                    RequesterEmployeeId = leaveRequest.EmployeeId,
+                    ApproverEmployeeId = nextApproverEmployeeId.Value,
+                    Type = "Leave",
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        var emp = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
         return new LeaveRequestDto
         {
-            Id = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.Id,
             EmployeeId = leaveRequest.EmployeeId,
-            EmployeeName = employee?.Name ?? "",
+            EmployeeName = emp?.Name ?? "",
             LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
             StartDate = leaveRequest.StartDate,
             EndDate = leaveRequest.EndDate,
@@ -98,7 +140,7 @@ public class LeaveApprovalUseCase
         };
     }
 
-    public async Task<LeaveRequestDto> RejectAsync(Guid leaveRequestId, string approverRole, int approverId, string? comment)
+    public async Task<LeaveRequestDto> RejectAsync(int leaveRequestId, string approverRole, int approverId, string? comment)
     {
         var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
         if (leaveRequest == null)
@@ -127,12 +169,23 @@ public class LeaveApprovalUseCase
         };
 
         await _approvalHistoryRepository.CreateAsync(history);
+
+        await _approvalRepository.UpdateAsync(new ApprovalItem
+        {
+            LeaveRequestId = leaveRequestId,
+            RequesterEmployeeId = leaveRequest.EmployeeId,
+            ApproverEmployeeId = approverId,
+            Type = "Leave",
+            Status = "Rejected",
+            Comment = comment
+        });
+
         await _leaveRepository.UpdateStatusAsync(leaveRequestId, LeaveStatus.Rejected.ToString());
 
         var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
         return new LeaveRequestDto
         {
-            Id = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.Id,
             EmployeeId = leaveRequest.EmployeeId,
             EmployeeName = employee?.Name ?? "",
             LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
@@ -144,7 +197,7 @@ public class LeaveApprovalUseCase
         };
     }
 
-    public async Task<LeaveRequestDto> CancelAsync(Guid leaveRequestId, int employeeId)
+    public async Task<LeaveRequestDto> CancelAsync(int leaveRequestId, int employeeId)
     {
         var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
         if (leaveRequest == null)
@@ -164,10 +217,24 @@ public class LeaveApprovalUseCase
 
         await _leaveRepository.UpdateStatusAsync(leaveRequestId, LeaveStatus.Cancelled.ToString());
 
+        var pendingItems = await _approvalRepository.GetByLeaveRequestIdAsync(leaveRequestId);
+        foreach (var item in pendingItems.Where(i => i.Status == "Pending"))
+        {
+            await _approvalRepository.UpdateAsync(new ApprovalItem
+            {
+                LeaveRequestId = leaveRequestId,
+                RequesterEmployeeId = leaveRequest.EmployeeId,
+                ApproverEmployeeId = item.ApproverEmployeeId,
+                Type = "Leave",
+                Status = "Cancelled",
+                Comment = "Cancelled by requester"
+            });
+        }
+
         var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
         return new LeaveRequestDto
         {
-            Id = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.Id,
             EmployeeId = leaveRequest.EmployeeId,
             EmployeeName = employee?.Name ?? "",
             LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
@@ -179,7 +246,7 @@ public class LeaveApprovalUseCase
         };
     }
 
-    public async Task<LeaveTimelineDto> GetTimelineAsync(Guid leaveRequestId)
+    public async Task<LeaveTimelineDto> GetTimelineAsync(int leaveRequestId)
     {
         var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
         if (leaveRequest == null)

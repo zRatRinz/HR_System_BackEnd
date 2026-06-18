@@ -8,10 +8,12 @@ public static class Permissions
     public const string EmployeesDelete = "employees.delete";
 
     public const string LeavesView = "leaves.view";
+    public const string LeavesViewOverview = "leaves.view_overview";
     public const string LeavesCreate = "leaves.create";
     public const string LeavesApprove = "leaves.approve";
 
     public const string AttendanceView = "attendance.view";
+    public const string AttendanceViewOverview = "attendance.view_overview";
     public const string AttendanceEdit = "attendance.edit";
     public const string AttendanceCheckIn = "attendance.checkin";
     public const string AttendanceCheckOut = "attendance.checkout";
@@ -41,8 +43,8 @@ public static class Permissions
     public static readonly string[] All =
     [
         EmployeesView, EmployeesCreate, EmployeesEdit, EmployeesDelete,
-        LeavesView, LeavesCreate, LeavesApprove,
-        AttendanceView, AttendanceEdit, AttendanceCheckIn, AttendanceCheckOut,
+        LeavesView, LeavesViewOverview, LeavesCreate, LeavesApprove,
+        AttendanceView, AttendanceViewOverview, AttendanceEdit, AttendanceCheckIn, AttendanceCheckOut,
         PositionsView, PositionsCreate, PositionsEdit,
         RolesView,
         SettingsView, SettingsEdit,

@@ -11,7 +11,8 @@ public interface IAttendanceRepository
     Task<decimal> GetAttendanceRateAsync();
 
     Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit);
-    Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId);
+    Task<(List<AttendanceDto> Items, int Total)> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId, string? status);
+    Task<(List<AttendanceDto> Items, int Total)> GetByEmployeeIdAsync(int employeeId, DateTime? date, int page, int limit);
     Task<(int CheckedIn, int Late)> GetTodayStatsAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
     Task<int> GetActiveEmployeeCountAsync(int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope);
 }

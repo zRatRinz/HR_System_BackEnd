@@ -32,11 +32,25 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LeaveListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? status,
-        [FromQuery] int? employeeId,
         [FromQuery] int page = 1,
         [FromQuery] int limit = 10)
     {
-        var response = await _leaveUseCase.GetAllAsync(status, employeeId, page, limit);
+        var response = await _leaveUseCase.GetMyLeavesAsync(status, page, limit);
+        return Ok(ApiResponse<LeaveListResponse>.Success(response));
+    }
+
+    [HttpGet("overview")]
+    [RequirePermission("leaves.view_overview")]
+    [ProducesResponseType(typeof(ApiResponse<LeaveListResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllOverview(
+        [FromQuery] string? status,
+        [FromQuery] int? employeeId,
+        [FromQuery] int? divisionId,
+        [FromQuery] int? departmentId,
+        [FromQuery] int page = 1,
+        [FromQuery] int limit = 10)
+    {
+        var response = await _leaveUseCase.GetTeamLeavesAsync(status, employeeId, divisionId, departmentId, page, limit);
         return Ok(ApiResponse<LeaveListResponse>.Success(response));
     }
 
@@ -56,7 +70,7 @@ public class LeaveController : ControllerBase
         }
 
         var leaveRequest = await _leaveUseCase.CreateAsync(userId, request);
-        return CreatedAtAction(nameof(GetAll), new { id = leaveRequest.Id }, ApiResponse<LeaveRequestDto>.Success(leaveRequest, "Leave request created"));
+        return CreatedAtAction(nameof(GetAll), new { id = leaveRequest.LeaveRequestId }, ApiResponse<LeaveRequestDto>.Success(leaveRequest, "Leave request created"));
     }
 
     [HttpPut("{id}")]
@@ -65,7 +79,7 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateLeaveRequest request)
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateLeaveRequest request)
     {
         var leaveRequest = await _leaveUseCase.UpdateStatusAsync(id, request);
         return Ok(ApiResponse<LeaveRequestDto>.Success(leaveRequest, $"Leave request {request.Status}"));
@@ -103,7 +117,7 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Approve(Guid id, [FromBody] ApproveLeaveRequest request)
+    public async Task<IActionResult> Approve(int id, [FromBody] ApproveLeaveRequest request)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value;
@@ -140,7 +154,7 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Reject(Guid id, [FromBody] RejectLeaveRequest request)
+    public async Task<IActionResult> Reject(int id, [FromBody] RejectLeaveRequest request)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value;
@@ -176,7 +190,7 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Cancel(Guid id)
+    public async Task<IActionResult> Cancel(int id)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value;
@@ -210,7 +224,7 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LeaveTimelineDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTimeline(Guid id)
+    public async Task<IActionResult> GetTimeline(int id)
     {
         try
         {

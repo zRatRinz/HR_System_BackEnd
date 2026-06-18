@@ -8,37 +8,41 @@ public class PermissionService : IPermissionService
     public string[] GetPermissionsForRole(UserRole role) => role switch
     {
         UserRole.Admin => Permissions.All,
+        UserRole.Manager => new[]
+        {
+            Permissions.EmployeesView,
+            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
+            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
+            Permissions.DashboardView,
+            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
+        },
         UserRole.HeadDivision => new[]
         {
             Permissions.EmployeesView, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.DashboardView,
+            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
+            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
+            Permissions.DashboardView,
             Permissions.DivisionsView, Permissions.DepartmentsView,
             Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
         },
         UserRole.HeadDepartment => new[]
         {
             Permissions.EmployeesView, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.DashboardView,
+            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
+            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
+            Permissions.DashboardView,
             Permissions.DivisionsView, Permissions.DepartmentsView,
             Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
         },
         UserRole.HR => new[]
         {
             Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.AttendanceView,
+            Permissions.LeavesView, Permissions.LeavesViewOverview,
+            Permissions.AttendanceView, Permissions.AttendanceViewOverview,
             Permissions.PayrollView, Permissions.DashboardView,
             Permissions.PositionsView, Permissions.PositionsCreate, Permissions.PositionsEdit,
             Permissions.RolesView, Permissions.SettingsView,
             Permissions.DivisionsView, Permissions.DepartmentsView
-        },
-        UserRole.Manager => new[]
-        {
-            Permissions.EmployeesView,
-            Permissions.LeavesView, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.DashboardView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
         },
         UserRole.Audit => new[]
         {
