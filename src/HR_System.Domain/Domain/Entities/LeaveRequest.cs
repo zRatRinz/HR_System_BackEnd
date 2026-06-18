@@ -4,7 +4,7 @@ namespace HR_System.Domain.Entities;
 
 public class LeaveRequest
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public int EmployeeId { get; set; }
     public LeaveType LeaveType { get; set; }
     public DateTime StartDate { get; set; }

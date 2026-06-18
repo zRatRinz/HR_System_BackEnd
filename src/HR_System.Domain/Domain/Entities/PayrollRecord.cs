@@ -4,7 +4,7 @@ namespace HR_System.Domain.Entities;
 
 public class PayrollRecord
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public int EmployeeId { get; set; }
     public string Period { get; set; } = string.Empty;
     public decimal BasicSalary { get; set; }

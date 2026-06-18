@@ -3,7 +3,7 @@ namespace HR_System.Domain.Entities;
 public class LeaveApprovalHistory
 {
     public int Id { get; set; }
-    public Guid LeaveRequestId { get; set; }
+    public int LeaveRequestId { get; set; }
     public int StepNumber { get; set; }
     public string ApproverRole { get; set; } = "";
     public int? ApproverId { get; set; }
