@@ -72,7 +72,6 @@ public class PayrollUseCase
         {
             var payroll = new PayrollRecord
             {
-                Id = Guid.NewGuid(),
                 EmployeeId = empId,
                 Period = period,
                 BasicSalary = 50000,

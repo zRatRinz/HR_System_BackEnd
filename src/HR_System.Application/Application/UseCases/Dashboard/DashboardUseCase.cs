@@ -11,26 +11,32 @@ public class DashboardUseCase
     private readonly IAttendanceRepository _attendanceRepository;
     private readonly IApprovalRepository _approvalRepository;
     private readonly IPayrollRepository _payrollRepository;
+    private readonly IScopeService _scopeService;
 
     public DashboardUseCase(
         IEmployeeRepository employeeRepository,
         ILeaveRepository leaveRepository,
         IAttendanceRepository attendanceRepository,
         IApprovalRepository approvalRepository,
-        IPayrollRepository payrollRepository)
+        IPayrollRepository payrollRepository,
+        IScopeService scopeService)
     {
         _employeeRepository = employeeRepository;
         _leaveRepository = leaveRepository;
         _attendanceRepository = attendanceRepository;
         _approvalRepository = approvalRepository;
         _payrollRepository = payrollRepository;
+        _scopeService = scopeService;
     }
 
     public async Task<DashboardStatsResponse> GetStatsAsync()
     {
         var totalEmployees = await _employeeRepository.GetTotalCountAsync();
         var onLeaveToday = await _leaveRepository.GetOnLeaveCountTodayAsync();
-        var pendingApprovals = await _approvalRepository.GetPendingCountAsync();
+        var employeeId = _scopeService.GetEmployeeId();
+        var pendingApprovals = employeeId.HasValue
+            ? await _approvalRepository.GetPendingCountByApproverEmployeeIdAsync(employeeId.Value)
+            : 0;
         var attendanceRate = await _attendanceRepository.GetAttendanceRateAsync();
 
         var currentPeriod = DateTime.UtcNow.ToString("yyyy-MM");
