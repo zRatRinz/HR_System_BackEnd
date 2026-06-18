@@ -373,6 +373,51 @@ public class EmployeeRepository : BaseRepository, IEmployeeRepository
         return results.ToList();
     }
 
+    public async Task<int?> GetHeadOfDepartmentEmployeeIdAsync(int? departmentId)
+    {
+        if (!departmentId.HasValue)
+            return null;
+
+        var sql = @"
+            SELECT TOP 1 e.EmployeeId
+            FROM Employees e
+            INNER JOIN UserRoles ur ON e.UserId = ur.UserId
+            INNER JOIN Roles r ON ur.RoleId = r.RoleId
+            WHERE e.DepartmentId = @DepartmentId AND r.RoleName = 'HeadDepartment'";
+
+        var result = await QuerySingleOrDefaultAsync<int?>(sql, new { DepartmentId = departmentId.Value });
+        return result;
+    }
+
+    public async Task<int?> GetHeadOfDivisionEmployeeIdAsync(int? divisionId)
+    {
+        if (!divisionId.HasValue)
+            return null;
+
+        var sql = @"
+            SELECT TOP 1 e.EmployeeId
+            FROM Employees e
+            INNER JOIN UserRoles ur ON e.UserId = ur.UserId
+            INNER JOIN Roles r ON ur.RoleId = r.RoleId
+            WHERE e.DivisionId = @DivisionId AND r.RoleName = 'HeadDivision'";
+
+        var result = await QuerySingleOrDefaultAsync<int?>(sql, new { DivisionId = divisionId.Value });
+        return result;
+    }
+
+    public async Task<int?> GetHrEmployeeIdAsync()
+    {
+        var sql = @"
+            SELECT TOP 1 e.EmployeeId
+            FROM Employees e
+            INNER JOIN UserRoles ur ON e.UserId = ur.UserId
+            INNER JOIN Roles r ON ur.RoleId = r.RoleId
+            WHERE r.RoleName = 'HR'";
+
+        var result = await QuerySingleOrDefaultAsync<int?>(sql);
+        return result;
+    }
+
     private class DepartmentCount
     {
         public string Department { get; set; } = "";

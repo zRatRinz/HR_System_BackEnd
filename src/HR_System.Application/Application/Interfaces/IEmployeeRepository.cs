@@ -22,4 +22,7 @@ public interface IEmployeeRepository
     Task<(List<EmployeeDto> Employees, int Total)> GetAllAsync(string? search, string? department, string? status, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId);
     Task<List<int>> GetAllIdsAsync(int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId);
     Task<List<EmployeeSearchDto>> SearchAsync(string query);
+    Task<int?> GetHeadOfDepartmentEmployeeIdAsync(int? departmentId);
+    Task<int?> GetHeadOfDivisionEmployeeIdAsync(int? divisionId);
+    Task<int?> GetHrEmployeeIdAsync();
 }
