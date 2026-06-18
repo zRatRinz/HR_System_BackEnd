@@ -22,21 +22,19 @@ public class ApprovalsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<ApprovalListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAll([FromQuery] string? status)
+    public async Task<IActionResult> GetPending([FromQuery] int page = 1, [FromQuery] int limit = 10)
     {
-        var response = await _approvalUseCase.GetAllAsync(status);
+        var response = await _approvalUseCase.GetPendingForCurrentApproverAsync(page, limit);
         return Ok(ApiResponse<ApprovalListResponse>.Success(response));
     }
 
-    [HttpPut("{id}")]
+    [HttpGet("{leaveRequestId:int}")]
     [RequirePermission("leaves.approve")]
-    [ProducesResponseType(typeof(ApiResponse<ApprovalItemDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<ApprovalListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateApprovalRequest request)
+    public async Task<IActionResult> GetByLeaveRequest(int leaveRequestId)
     {
-        var item = await _approvalUseCase.UpdateStatusAsync(id, request);
-        return Ok(ApiResponse<ApprovalItemDto>.Success(item, $"Approval {request.Status.ToString().ToLower()}"));
+        var response = await _approvalUseCase.GetByLeaveRequestIdAsync(leaveRequestId);
+        return Ok(ApiResponse<ApprovalListResponse>.Success(response));
     }
 }
