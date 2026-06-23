@@ -50,13 +50,23 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
         return item;
     }
 
+    public async Task<ApprovalItem?> GetApprovalItemByIdAsync(int approvalItemId)
+    {
+        var sql = @"
+            SELECT ApprovalItemId, LeaveRequestId, RequesterEmployeeId, ApproverEmployeeId, Type, Status, Comment, CreatedAt, UpdatedAt
+            FROM ApprovalItems
+            WHERE ApprovalItemId = @ApprovalItemId";
+
+        return await QuerySingleOrDefaultAsync<ApprovalItem>(sql, new { ApprovalItemId = approvalItemId });
+    }
+
     public async Task<(List<ApprovalItemDto> Items, int Total)> GetPendingByApproverEmployeeIdAsync(int approverEmployeeId, int page, int limit)
     {
-        var countSql = "SELECT COUNT(*) FROM ApprovalItems WHERE ApproverEmployeeId = @ApproverEmployeeId AND Status = 'Pending'";
+        var countSql = "SELECT COUNT(*) FROM ApprovalItems WHERE ApproverEmployeeId = @ApproverEmployeeId";
         var total = await ExecuteScalarAsync<int>(countSql, new { ApproverEmployeeId = approverEmployeeId });
 
         var sql = @"
-            SELECT 
+            SELECT
                 a.ApprovalItemId,
                 a.LeaveRequestId,
                 a.RequesterEmployeeId,
@@ -70,8 +80,8 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
             FROM ApprovalItems a
             INNER JOIN Employees r ON a.RequesterEmployeeId = r.EmployeeId
             INNER JOIN Employees ap ON a.ApproverEmployeeId = ap.EmployeeId
-            WHERE a.ApproverEmployeeId = @ApproverEmployeeId AND a.Status = 'Pending'
-            ORDER BY a.CreatedAt DESC
+            WHERE a.ApproverEmployeeId = @ApproverEmployeeId
+            ORDER BY CASE WHEN a.Status = 'Pending' THEN 0 ELSE 1 END, a.CreatedAt DESC
             OFFSET (@Page-1)*@Limit ROWS FETCH NEXT @Limit ROWS ONLY";
 
         var results = await QueryAsync<ApprovalItemDto>(sql, new { ApproverEmployeeId = approverEmployeeId, Page = page, Limit = limit });
@@ -81,7 +91,7 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
     public async Task<List<ApprovalItemDto>> GetByLeaveRequestIdAsync(int leaveRequestId)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 a.ApprovalItemId,
                 a.LeaveRequestId,
                 a.RequesterEmployeeId,
@@ -91,10 +101,12 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
                 a.Type,
                 a.Status,
                 a.Comment,
-                a.CreatedAt
+                a.CreatedAt,
+                lr.Reason
             FROM ApprovalItems a
             INNER JOIN Employees r ON a.RequesterEmployeeId = r.EmployeeId
             INNER JOIN Employees ap ON a.ApproverEmployeeId = ap.EmployeeId
+            INNER JOIN LeaveRequests lr ON a.LeaveRequestId = lr.Id
             WHERE a.LeaveRequestId = @LeaveRequestId
             ORDER BY a.CreatedAt ASC";
 
@@ -106,5 +118,89 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
     {
         var sql = "SELECT COUNT(*) FROM ApprovalItems WHERE ApproverEmployeeId = @ApproverEmployeeId AND Status = 'Pending'";
         return await ExecuteScalarAsync<int>(sql, new { ApproverEmployeeId = approverEmployeeId });
+    }
+
+    public async Task<LeaveApprovalHistory> CreateHistoryAsync(LeaveApprovalHistory history)
+    {
+        var sql = @"
+            INSERT INTO LeaveApprovalHistory (LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt)
+            VALUES (@LeaveRequestId, @StepNumber, @ApproverRole, @ApproverId, @Status, @Comment, @ActionAt, @CreatedAt);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+        var newId = await ExecuteScalarAsync<int>(sql, new
+        {
+            LeaveRequestId = history.LeaveRequestId,
+            history.StepNumber,
+            history.ApproverRole,
+            history.ApproverId,
+            history.Status,
+            history.Comment,
+            history.ActionAt,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        history.Id = newId;
+        return history;
+    }
+
+    public async Task<List<LeaveApprovalHistory>> GetHistoryByLeaveRequestIdAsync(int leaveRequestId)
+    {
+        var sql = @"
+            SELECT Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
+            FROM LeaveApprovalHistory
+            WHERE LeaveRequestId = @LeaveRequestId
+            ORDER BY StepNumber";
+
+        var results = await QueryAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
+        return results.ToList();
+    }
+
+    public async Task<LeaveApprovalHistory?> GetCurrentStepAsync(int leaveRequestId)
+    {
+        var sql = @"
+            SELECT TOP 1 Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
+            FROM LeaveApprovalHistory
+            WHERE LeaveRequestId = @LeaveRequestId AND Status = 'Pending'
+            ORDER BY StepNumber";
+
+        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
+    }
+
+    public async Task<LeaveApprovalHistory?> GetLatestStepAsync(int leaveRequestId)
+    {
+        var sql = @"
+            SELECT TOP 1 Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
+            FROM LeaveApprovalHistory
+            WHERE LeaveRequestId = @LeaveRequestId
+            ORDER BY StepNumber DESC";
+
+        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
+    }
+
+    public async Task<LeaveApprovalHistory?> GetNextWaitingStepAsync(int leaveRequestId)
+    {
+        var sql = @"
+            SELECT TOP 1 Id, LeaveRequestId, StepNumber, ApproverRole, ApproverId, Status, Comment, ActionAt, CreatedAt
+            FROM LeaveApprovalHistory
+            WHERE LeaveRequestId = @LeaveRequestId AND Status = 'Waiting'
+            ORDER BY StepNumber ASC";
+
+        return await QuerySingleOrDefaultAsync<LeaveApprovalHistory>(sql, new { LeaveRequestId = leaveRequestId });
+    }
+
+    public async Task UpdateHistoryAsync(LeaveApprovalHistory history)
+    {
+        var sql = @"
+            UPDATE LeaveApprovalHistory
+            SET Status = @Status, Comment = @Comment, ActionAt = @ActionAt
+            WHERE Id = @Id";
+
+        await ExecuteAsync(sql, new
+        {
+            history.Id,
+            history.Status,
+            history.Comment,
+            history.ActionAt
+        });
     }
 }

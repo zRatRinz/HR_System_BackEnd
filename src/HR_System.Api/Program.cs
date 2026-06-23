@@ -93,7 +93,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<ILeaveRepository, LeaveRepository>();
-builder.Services.AddScoped<ILeaveApprovalHistoryRepository, LeaveApprovalHistoryRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
 builder.Services.AddScoped<IApprovalRepository, ApprovalRepository>();
@@ -114,7 +113,6 @@ builder.Services.AddScoped<EmployeeUseCase>();
 builder.Services.AddScoped<LeaveUseCase>();
 builder.Services.AddScoped<LeaveBalanceUseCase>();
 builder.Services.AddScoped<LeaveCalendarUseCase>();
-builder.Services.AddScoped<LeaveApprovalUseCase>();
 builder.Services.AddScoped<AttendanceUseCase>();
 builder.Services.AddScoped<AttendanceTodayStatsUseCase>();
 builder.Services.AddScoped<PayrollUseCase>();

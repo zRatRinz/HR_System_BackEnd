@@ -13,18 +13,15 @@ public class LeaveController : ControllerBase
     private readonly LeaveUseCase _leaveUseCase;
     private readonly LeaveBalanceUseCase _leaveBalanceUseCase;
     private readonly LeaveCalendarUseCase _leaveCalendarUseCase;
-    private readonly LeaveApprovalUseCase _leaveApprovalUseCase;
 
     public LeaveController(
         LeaveUseCase leaveUseCase,
         LeaveBalanceUseCase leaveBalanceUseCase,
-        LeaveCalendarUseCase leaveCalendarUseCase,
-        LeaveApprovalUseCase leaveApprovalUseCase)
+        LeaveCalendarUseCase leaveCalendarUseCase)
     {
         _leaveUseCase = leaveUseCase;
         _leaveBalanceUseCase = leaveBalanceUseCase;
         _leaveCalendarUseCase = leaveCalendarUseCase;
-        _leaveApprovalUseCase = leaveApprovalUseCase;
     }
 
     [HttpGet]
@@ -111,80 +108,6 @@ public class LeaveController : ControllerBase
         return Ok(ApiResponse<LeaveCalendarDto>.Success(calendar));
     }
 
-    [HttpPut("requests/{id}/approve")]
-    [RequirePermission("leaves.approve")]
-    [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Approve(int id, [FromBody] ApproveLeaveRequest request)
-    {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(ApiResponse.Fail("Invalid token"));
-        }
-
-        var roles = User.FindFirst("roles")?.Value?.Split(',') ?? Array.Empty<string>();
-        var approverRole = roles.FirstOrDefault(r =>
-            r.Equals("HeadDepartment", StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("HeadDivision", StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("HR", StringComparison.OrdinalIgnoreCase)) ?? "";
-
-        try
-        {
-            var result = await _leaveApprovalUseCase.ApproveAsync(id, approverRole, userId, request.Comment);
-            return Ok(ApiResponse<LeaveRequestDto>.Success(result, "Leave request approved"));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ApiResponse.Fail(ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse.Fail(ex.Message));
-        }
-    }
-
-    [HttpPut("requests/{id}/reject")]
-    [RequirePermission("leaves.approve")]
-    [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Reject(int id, [FromBody] RejectLeaveRequest request)
-    {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(ApiResponse.Fail("Invalid token"));
-        }
-
-        var roles = User.FindFirst("roles")?.Value?.Split(',') ?? Array.Empty<string>();
-        var approverRole = roles.FirstOrDefault(r =>
-            r.Equals("HeadDepartment", StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("HeadDivision", StringComparison.OrdinalIgnoreCase) ||
-            r.Equals("HR", StringComparison.OrdinalIgnoreCase)) ?? "";
-
-        try
-        {
-            var result = await _leaveApprovalUseCase.RejectAsync(id, approverRole, userId, request.Comment);
-            return Ok(ApiResponse<LeaveRequestDto>.Success(result, "Leave request rejected"));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ApiResponse.Fail(ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse.Fail(ex.Message));
-        }
-    }
-
     [HttpPut("requests/{id}/cancel")]
     [RequirePermission("leaves.view")]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
@@ -202,7 +125,7 @@ public class LeaveController : ControllerBase
 
         try
         {
-            var result = await _leaveApprovalUseCase.CancelAsync(id, userId);
+            var result = await _leaveUseCase.CancelAsync(id, userId);
             return Ok(ApiResponse<LeaveRequestDto>.Success(result, "Leave request cancelled"));
         }
         catch (InvalidOperationException ex)
@@ -212,24 +135,6 @@ public class LeaveController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(ApiResponse.Fail(ex.Message));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse.Fail(ex.Message));
-        }
-    }
-
-    [HttpGet("requests/{id}/timeline")]
-    [RequirePermission("leaves.view")]
-    [ProducesResponseType(typeof(ApiResponse<LeaveTimelineDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetTimeline(int id)
-    {
-        try
-        {
-            var timeline = await _leaveApprovalUseCase.GetTimelineAsync(id);
-            return Ok(ApiResponse<LeaveTimelineDto>.Success(timeline));
         }
         catch (KeyNotFoundException ex)
         {

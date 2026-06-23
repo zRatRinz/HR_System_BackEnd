@@ -131,31 +131,39 @@ public class LeaveUseCase
             throw new KeyNotFoundException("Employee not found");
         }
 
-        int approverEmployeeId;
-        var headDeptId = await _employeeRepository.GetHeadOfDepartmentEmployeeIdAsync(employee.DepartmentId);
-        if (headDeptId.HasValue)
+        var roles = _scopeService.GetRoles();
+
+        if (roles.Any(r => r.Equals("HR", StringComparison.OrdinalIgnoreCase) ||
+                           r.Equals("Manager", StringComparison.OrdinalIgnoreCase)))
         {
-            approverEmployeeId = headDeptId.Value;
-        }
-        else
-        {
-            var headDivId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
-            if (headDivId.HasValue)
+            var leaveDays = (int)(request.EndDate - request.StartDate).TotalDays + 1;
+
+            var approvedLeaveRequest = new LeaveRequest
             {
-                approverEmployeeId = headDivId.Value;
-            }
-            else
+                EmployeeId = employeeId,
+                LeaveType = Enum.Parse<LeaveType>(request.LeaveType, true),
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                Days = leaveDays,
+                Status = LeaveStatus.Approved,
+                Reason = request.Reason,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _leaveRepository.CreateAsync(approvedLeaveRequest);
+
+            return new LeaveRequestDto
             {
-                var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
-                if (hrId.HasValue)
-                {
-                    approverEmployeeId = hrId.Value;
-                }
-                else
-                {
-                    throw new InvalidOperationException("No approver found in the system");
-                }
-            }
+                LeaveRequestId = approvedLeaveRequest.Id,
+                EmployeeId = employeeId,
+                EmployeeName = employee.Name,
+                LeaveType = approvedLeaveRequest.LeaveType.ToString().ToLower(),
+                StartDate = approvedLeaveRequest.StartDate,
+                EndDate = approvedLeaveRequest.EndDate,
+                Days = approvedLeaveRequest.Days,
+                Status = approvedLeaveRequest.Status.ToString().ToLower(),
+                Reason = approvedLeaveRequest.Reason
+            };
         }
 
         var days = (int)(request.EndDate - request.StartDate).TotalDays + 1;
@@ -174,16 +182,96 @@ public class LeaveUseCase
 
         await _leaveRepository.CreateAsync(leaveRequest);
 
+        string initialApproverRole;
+        int initialApproverId;
+
+        if (roles.Any(r => r.Equals("HeadDepartment", StringComparison.OrdinalIgnoreCase)))
+        {
+            initialApproverRole = "HeadDivision";
+            var headDivId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
+            if (headDivId.HasValue)
+            {
+                initialApproverId = headDivId.Value;
+            }
+            else
+            {
+                var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
+                if (hrId.HasValue)
+                {
+                    initialApproverId = hrId.Value;
+                    initialApproverRole = "HR";
+                }
+                else
+                {
+                    throw new InvalidOperationException("No approver found in the system");
+                }
+            }
+        }
+        else if (roles.Any(r => r.Equals("HeadDivision", StringComparison.OrdinalIgnoreCase)))
+        {
+            initialApproverRole = "HR";
+            var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
+            if (hrId.HasValue)
+            {
+                initialApproverId = hrId.Value;
+            }
+            else
+            {
+                throw new InvalidOperationException("No approver found in the system");
+            }
+        }
+        else
+        {
+            initialApproverRole = "HeadDepartment";
+            var headDeptId = await _employeeRepository.GetHeadOfDepartmentEmployeeIdAsync(employee.DepartmentId);
+            if (headDeptId.HasValue)
+            {
+                initialApproverId = headDeptId.Value;
+            }
+            else
+            {
+                var headDivId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
+                if (headDivId.HasValue)
+                {
+                    initialApproverId = headDivId.Value;
+                    initialApproverRole = "HeadDivision";
+                }
+                else
+                {
+                    var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
+                    if (hrId.HasValue)
+                    {
+                        initialApproverId = hrId.Value;
+                        initialApproverRole = "HR";
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("No approver found in the system");
+                    }
+                }
+            }
+        }
+
+        var history = new LeaveApprovalHistory
+        {
+            LeaveRequestId = leaveRequest.Id,
+            StepNumber = 1,
+            ApproverRole = initialApproverRole,
+            ApproverId = initialApproverId,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
+        };
+        await _approvalRepository.CreateHistoryAsync(history);
+
         var approvalItem = new ApprovalItem
         {
             LeaveRequestId = leaveRequest.Id,
             RequesterEmployeeId = employeeId,
-            ApproverEmployeeId = approverEmployeeId,
+            ApproverEmployeeId = initialApproverId,
             Type = "Leave",
             Status = "Pending",
             CreatedAt = DateTime.UtcNow
         };
-
         await _approvalRepository.CreateAsync(approvalItem);
 
         return new LeaveRequestDto
@@ -219,6 +307,55 @@ public class LeaveUseCase
 
         leaveRequestDto.Status = request.Status.ToLower();
         return leaveRequestDto;
+    }
+
+    public async Task<LeaveRequestDto> CancelAsync(int leaveRequestId, int employeeId)
+    {
+        var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
+        if (leaveRequest == null)
+        {
+            throw new KeyNotFoundException("Leave request not found");
+        }
+
+        if (leaveRequest.EmployeeId != employeeId)
+        {
+            throw new UnauthorizedAccessException("You can only cancel your own leave requests");
+        }
+
+        if (leaveRequest.Status != LeaveStatus.Pending)
+        {
+            throw new InvalidOperationException("Only pending requests can be cancelled");
+        }
+
+        await _leaveRepository.UpdateStatusAsync(leaveRequestId, LeaveStatus.Cancelled.ToString());
+
+        var pendingItems = await _approvalRepository.GetByLeaveRequestIdAsync(leaveRequestId);
+        foreach (var item in pendingItems.Where(i => i.Status == "Pending"))
+        {
+            await _approvalRepository.UpdateAsync(new ApprovalItem
+            {
+                LeaveRequestId = leaveRequestId,
+                RequesterEmployeeId = leaveRequest.EmployeeId,
+                ApproverEmployeeId = item.ApproverEmployeeId,
+                Type = "Leave",
+                Status = "Cancelled",
+                Comment = "Cancelled by requester"
+            });
+        }
+
+        var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
+        return new LeaveRequestDto
+        {
+            LeaveRequestId = leaveRequest.Id,
+            EmployeeId = leaveRequest.EmployeeId,
+            EmployeeName = employee?.Name ?? "",
+            LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
+            StartDate = leaveRequest.StartDate,
+            EndDate = leaveRequest.EndDate,
+            Days = leaveRequest.Days,
+            Status = "cancelled",
+            Reason = leaveRequest.Reason
+        };
     }
 
     private static LeaveRequestDto MapToDto(LeaveRequest leaveRequest)
