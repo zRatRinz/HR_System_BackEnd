@@ -30,9 +30,10 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpGet("{leaveRequestId:int}")]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission("leaves.view")]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestApprovalDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByLeaveRequest(int leaveRequestId)
     {
@@ -44,6 +45,10 @@ public class ApprovalsController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(ApiResponse.Fail(ex.Message));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, ApiResponse.Fail(ex.Message));
         }
     }
 
