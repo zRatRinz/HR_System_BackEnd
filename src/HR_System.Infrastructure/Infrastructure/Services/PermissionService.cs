@@ -46,7 +46,6 @@ public class PermissionService : IPermissionService
         },
         UserRole.Audit => new[]
         {
-            Permissions.LeavesView,
             Permissions.PayrollView, Permissions.DashboardViewAll,
             Permissions.ReportsView, Permissions.SettingsView
         },

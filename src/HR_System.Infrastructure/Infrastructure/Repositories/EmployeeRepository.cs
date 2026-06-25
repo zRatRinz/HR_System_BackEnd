@@ -418,6 +418,33 @@ public class EmployeeRepository : BaseRepository, IEmployeeRepository
         return result;
     }
 
+    public async Task<int?> GetManagerEmployeeIdAsync()
+    {
+        var sql = @"
+            SELECT TOP 1 e.EmployeeId
+            FROM Employees e
+            INNER JOIN UserRoles ur ON e.UserId = ur.UserId
+            INNER JOIN Roles r ON ur.RoleId = r.RoleId
+            WHERE r.RoleName = 'Manager'";
+
+        var result = await QuerySingleOrDefaultAsync<int?>(sql);
+        return result;
+    }
+
+    public async Task<List<int>> GetEmployeeIdsByDivisionAsync(int divisionId)
+    {
+        var sql = "SELECT EmployeeId FROM Employees WHERE DivisionId = @DivisionId";
+        var results = await QueryAsync<int>(sql, new { DivisionId = divisionId });
+        return results.ToList();
+    }
+
+    public async Task<List<int>> GetEmployeeIdsByDepartmentAsync(int departmentId)
+    {
+        var sql = "SELECT EmployeeId FROM Employees WHERE DepartmentId = @DepartmentId";
+        var results = await QueryAsync<int>(sql, new { DepartmentId = departmentId });
+        return results.ToList();
+    }
+
     private class DepartmentCount
     {
         public string Department { get; set; } = "";
