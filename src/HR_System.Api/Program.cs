@@ -9,6 +9,7 @@ using HR_System.Application.UseCases.Dashboard;
 using HR_System.Application.UseCases.Department;
 using HR_System.Application.UseCases.Division;
 using HR_System.Application.UseCases.Employee;
+using HR_System.Application.UseCases.Holiday;
 using HR_System.Application.UseCases.Leave;
 using HR_System.Application.UseCases.Payroll;
 using HR_System.Application.UseCases.Position;
@@ -100,6 +101,7 @@ builder.Services.AddScoped<IPositionRepository, PositionRepository>();
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IDivisionRepository, DivisionRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IHolidayRepository, HolidayRepository>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -124,6 +126,7 @@ builder.Services.AddScoped<SettingsUseCase>();
 builder.Services.AddScoped<RoleUseCase>();
 builder.Services.AddScoped<DivisionUseCase>();
 builder.Services.AddScoped<DepartmentUseCase>();
+builder.Services.AddScoped<HolidayUseCase>();
 
 var app = builder.Build();
 
