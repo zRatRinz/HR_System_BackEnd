@@ -11,25 +11,6 @@ public class LeaveRepository : BaseRepository, ILeaveRepository
 {
     public LeaveRepository(IConfiguration configuration) : base(configuration) { }
 
-public async Task<LeaveRequest?> GetByIdAsync(int id)
-    {
-        var sql = @"
-            SELECT l.LeaveRequestId, l.EmployeeId, l.LeaveType, l.StartDate, l.EndDate,
-                   l.TotalDays, l.Reason, l.Status, l.ApprovedBy, l.ApprovedAt, l.CreatedAt, l.UpdatedAt,
-                   e.EmployeeId, e.UserId, e.FirstName, e.LastName, e.DivisionId, e.DepartmentId, e.PositionId,
-                   e.Status, e.CreatedAt, e.UpdatedAt,
-                   u.UserId, u.Email, u.Name, u.Status
-            FROM LeaveRequests l
-            INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId
-            LEFT JOIN Users u ON e.UserId = u.UserId
-            WHERE l.LeaveRequestId = @LeaveRequestId";
-
-        var result = await QuerySingleOrDefaultAsync<LeaveDto>(sql, new { LeaveRequestId = id.ToString() });
-        if (result == null) return null;
-
-        return MapToLeaveRequest(result);
-    }
-
     public async Task<(List<LeaveRequest> Items, int Total)> GetAllAsync(string? status, int? employeeId, int page, int limit)
     {
         var whereClause = "WHERE 1=1";
@@ -248,6 +229,20 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
         return results.Select(MapToLeaveRequest).ToList();
     }
 
+    public async Task<List<LeaveRequestDto>> GetByDateRangeDtoAsync(DateTime startDate, DateTime endDate)
+    {
+        var sql = @"
+            SELECT l.LeaveRequestId as LeaveRequestId, l.EmployeeId, l.LeaveType, 
+                   l.StartDate, l.EndDate, l.TotalDays as Days, l.Reason, l.Status,
+                   l.CreatedAt, (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM LeaveRequests l
+            INNER JOIN Employees e ON l.EmployeeId = e.EmployeeId
+            WHERE l.StartDate <= @EndDate AND l.EndDate >= @StartDate
+            ORDER BY l.StartDate";
+
+        return (await QueryAsync<LeaveRequestDto>(sql, new { StartDate = startDate, EndDate = endDate })).ToList();
+    }
+
     public async Task<LeaveRequestDto?> GetByIdAsDtoAsync(int id)
     {
         var sql = @"
@@ -401,7 +396,7 @@ public async Task<List<LeaveRequest>> GetByDateRangeAsync(DateTime startDate, Da
 
         await ExecuteAsync(sql, new
         {
-            LeaveRequestId = id.ToString(),
+            LeaveRequestId = id,
             Status = status,
             UpdatedAt = DateTime.UtcNow
         });

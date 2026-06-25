@@ -102,9 +102,13 @@ public class LeaveController : ControllerBase
     [HttpGet("calendar")]
     [RequirePermission("leaves.view")]
     [ProducesResponseType(typeof(ApiResponse<LeaveCalendarDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCalendar([FromQuery] int month, [FromQuery] int year)
+    public async Task<IActionResult> GetCalendar([FromQuery] int? month = null, [FromQuery] int? year = null)
     {
-        var calendar = await _leaveCalendarUseCase.GetCalendarAsync(month, year);
+        var now = DateTime.Now;
+        var requestedMonth = month ?? now.Month;
+        var requestedYear = year ?? now.Year;
+
+        var calendar = await _leaveCalendarUseCase.GetCalendarAsync(requestedMonth, requestedYear);
         return Ok(ApiResponse<LeaveCalendarDto>.Success(calendar));
     }
 
