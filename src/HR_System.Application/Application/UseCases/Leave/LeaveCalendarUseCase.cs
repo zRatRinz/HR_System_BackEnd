@@ -1,18 +1,27 @@
 using HR_System.Application.DTOs.Leave;
 using HR_System.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
+using System.Linq;
 
 namespace HR_System.Application.UseCases.Leave;
 
 public class LeaveCalendarUseCase
 {
     private readonly ILeaveRepository _leaveRepository;
-    private readonly IConfiguration _configuration;
+    private readonly IHolidayRepository _holidayRepository;
+    private readonly IEmployeeRepository _employeeRepository;
+    private readonly IScopeService _scopeService;
 
-    public LeaveCalendarUseCase(ILeaveRepository leaveRepository, IConfiguration configuration)
+    public LeaveCalendarUseCase(
+        ILeaveRepository leaveRepository,
+        IHolidayRepository holidayRepository,
+        IEmployeeRepository employeeRepository,
+        IScopeService scopeService)
     {
         _leaveRepository = leaveRepository;
-        _configuration = configuration;
+        _holidayRepository = holidayRepository;
+        _employeeRepository = employeeRepository;
+        _scopeService = scopeService;
     }
 
     public async Task<LeaveCalendarDto> GetCalendarAsync(int month, int year)
@@ -20,34 +29,63 @@ public class LeaveCalendarUseCase
         var startDate = new DateTime(year, month, 1);
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
-        var leaveRequests = await _leaveRepository.GetByDateRangeAsync(startDate, endDate);
+        var leaveRequests = await _leaveRepository.GetByDateRangeDtoAsync(startDate, endDate);
+        var approvedLeaves = leaveRequests.Where(l => l.Status.ToLower() == "approved").ToList();
 
-        var events = new List<LeaveCalendarEventDto>();
+        var roles = _scopeService.GetRoles();
+        var currentEmployeeId = _scopeService.GetEmployeeId();
+        var divisionId = _scopeService.GetDivisionId();
+        var departmentId = _scopeService.GetDepartmentId();
 
-        foreach (var request in leaveRequests.Where(l => l.Status == Domain.Enums.LeaveStatus.Approved))
+        bool bypassScope = roles.Any(r => r == "Admin" || r == "Manager" || r == "HR");
+
+        if (!bypassScope)
         {
-            for (var date = request.StartDate; date <= request.EndDate; date = date.AddDays(1))
+            if (roles.Any(r => r == "HeadDivision") && divisionId.HasValue)
             {
-                events.Add(new LeaveCalendarEventDto
-                {
-                    Date = date.ToString("yyyy-MM-dd"),
-                    Type = "leave",
-                    LeaveType = request.LeaveType.ToString()
-                });
+                var employeeIds = await _employeeRepository.GetEmployeeIdsByDivisionAsync(divisionId.Value);
+                approvedLeaves = approvedLeaves.Where(l => employeeIds.Contains(l.EmployeeId)).ToList();
+            }
+            else if (roles.Any(r => r == "HeadDepartment") && departmentId.HasValue)
+            {
+                var employeeIds = await _employeeRepository.GetEmployeeIdsByDepartmentAsync(departmentId.Value);
+                approvedLeaves = approvedLeaves.Where(l => employeeIds.Contains(l.EmployeeId)).ToList();
+            }
+            else if (currentEmployeeId.HasValue)
+            {
+                approvedLeaves = approvedLeaves.Where(l => l.EmployeeId == currentEmployeeId.Value).ToList();
+            }
+            else
+            {
+                approvedLeaves = new List<LeaveRequestDto>();
             }
         }
 
-        var holidays = _configuration.GetSection("Holidays").Get<List<HolidayConfig>>() ?? new();
-        foreach (var holiday in holidays.Where(h => h.Date.HasValue))
+        var leaves = new List<LeaveCalendarItemDto>();
+        foreach (var request in approvedLeaves)
         {
-            var holidayDate = holiday.Date!.Value;
+            leaves.Add(new LeaveCalendarItemDto
+            {
+                EmployeeName = request.EmployeeName,
+                LeaveType = request.LeaveType,
+                StartDate = request.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = request.EndDate.ToString("yyyy-MM-dd"),
+                Days = request.Days,
+                Reason = request.Reason
+            });
+        }
+
+        var holidays = await _holidayRepository.GetByYearAsync(year);
+        var holidayDtos = new List<HolidayCalendarDto>();
+        foreach (var holiday in holidays)
+        {
+            var holidayDate = DateOnly.FromDateTime(holiday.HolidayDate);
             if (holidayDate.Month == month && holidayDate.Year == year)
             {
-                events.Add(new LeaveCalendarEventDto
+                holidayDtos.Add(new HolidayCalendarDto
                 {
                     Date = holidayDate.ToString("yyyy-MM-dd"),
-                    Type = "holiday",
-                    Name = holiday.Name
+                    Name = holiday.HolidayName
                 });
             }
         }
@@ -56,13 +94,8 @@ public class LeaveCalendarUseCase
         {
             Month = month,
             Year = year,
-            Events = events.OrderBy(e => e.Date).ToList()
+            Holidays = holidayDtos.OrderBy(h => h.Date).ToList(),
+            Leaves = leaves.OrderBy(l => l.StartDate).ToList()
         };
-    }
-
-    private class HolidayConfig
-    {
-        public DateTime? Date { get; set; }
-        public string? Name { get; set; }
     }
 }

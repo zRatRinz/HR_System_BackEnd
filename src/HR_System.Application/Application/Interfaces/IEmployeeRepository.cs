@@ -25,4 +25,7 @@ public interface IEmployeeRepository
     Task<int?> GetHeadOfDepartmentEmployeeIdAsync(int? departmentId);
     Task<int?> GetHeadOfDivisionEmployeeIdAsync(int? divisionId);
     Task<int?> GetHrEmployeeIdAsync();
+    Task<int?> GetManagerEmployeeIdAsync();
+    Task<List<int>> GetEmployeeIdsByDivisionAsync(int divisionId);
+    Task<List<int>> GetEmployeeIdsByDepartmentAsync(int departmentId);
 }
