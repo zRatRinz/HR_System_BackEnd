@@ -133,39 +133,6 @@ public class LeaveUseCase
 
         var roles = _scopeService.GetRoles();
 
-        if (roles.Any(r => r.Equals("HR", StringComparison.OrdinalIgnoreCase) ||
-                           r.Equals("Manager", StringComparison.OrdinalIgnoreCase)))
-        {
-            var leaveDays = (int)(request.EndDate - request.StartDate).TotalDays + 1;
-
-            var approvedLeaveRequest = new LeaveRequest
-            {
-                EmployeeId = employeeId,
-                LeaveType = Enum.Parse<LeaveType>(request.LeaveType, true),
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
-                Days = leaveDays,
-                Status = LeaveStatus.Approved,
-                Reason = request.Reason,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _leaveRepository.CreateAsync(approvedLeaveRequest);
-
-            return new LeaveRequestDto
-            {
-                LeaveRequestId = approvedLeaveRequest.Id,
-                EmployeeId = employeeId,
-                EmployeeName = employee.Name,
-                LeaveType = approvedLeaveRequest.LeaveType.ToString().ToLower(),
-                StartDate = approvedLeaveRequest.StartDate,
-                EndDate = approvedLeaveRequest.EndDate,
-                Days = approvedLeaveRequest.Days,
-                Status = approvedLeaveRequest.Status.ToString().ToLower(),
-                Reason = approvedLeaveRequest.Reason
-            };
-        }
-
         var days = (int)(request.EndDate - request.StartDate).TotalDays + 1;
 
         var leaveRequest = new LeaveRequest
@@ -185,7 +152,33 @@ public class LeaveUseCase
         string initialApproverRole;
         int initialApproverId;
 
-        if (roles.Any(r => r.Equals("HeadDepartment", StringComparison.OrdinalIgnoreCase)))
+        if (roles.Any(r => r.Equals("HR", StringComparison.OrdinalIgnoreCase)))
+        {
+            initialApproverRole = "Manager";
+            var managerId = await _employeeRepository.GetManagerEmployeeIdAsync();
+            if (managerId.HasValue)
+            {
+                initialApproverId = managerId.Value;
+            }
+            else
+            {
+                throw new InvalidOperationException("No Manager found in the system. HR leave requests require a Manager approver.");
+            }
+        }
+        else if (roles.Any(r => r.Equals("Manager", StringComparison.OrdinalIgnoreCase)))
+        {
+            initialApproverRole = "HR";
+            var hrId = await _employeeRepository.GetHrEmployeeIdAsync();
+            if (hrId.HasValue)
+            {
+                initialApproverId = hrId.Value;
+            }
+            else
+            {
+                throw new InvalidOperationException("No HR found in the system");
+            }
+        }
+        else if (roles.Any(r => r.Equals("HeadDepartment", StringComparison.OrdinalIgnoreCase)))
         {
             initialApproverRole = "HeadDivision";
             var headDivId = await _employeeRepository.GetHeadOfDivisionEmployeeIdAsync(employee.DivisionId);
@@ -311,7 +304,7 @@ public class LeaveUseCase
 
     public async Task<LeaveRequestDto> CancelAsync(int leaveRequestId, int employeeId)
     {
-        var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
+        var leaveRequest = await _leaveRepository.GetByIdAsDtoAsync(leaveRequestId);
         if (leaveRequest == null)
         {
             throw new KeyNotFoundException("Leave request not found");
@@ -322,7 +315,7 @@ public class LeaveUseCase
             throw new UnauthorizedAccessException("You can only cancel your own leave requests");
         }
 
-        if (leaveRequest.Status != LeaveStatus.Pending)
+        if (leaveRequest.Status.ToLower() != "pending")
         {
             throw new InvalidOperationException("Only pending requests can be cancelled");
         }
@@ -346,10 +339,10 @@ public class LeaveUseCase
         var employee = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
         return new LeaveRequestDto
         {
-            LeaveRequestId = leaveRequest.Id,
+            LeaveRequestId = leaveRequest.LeaveRequestId,
             EmployeeId = leaveRequest.EmployeeId,
             EmployeeName = employee?.Name ?? "",
-            LeaveType = leaveRequest.LeaveType.ToString().ToLower(),
+            LeaveType = leaveRequest.LeaveType.ToLower(),
             StartDate = leaveRequest.StartDate,
             EndDate = leaveRequest.EndDate,
             Days = leaveRequest.Days,

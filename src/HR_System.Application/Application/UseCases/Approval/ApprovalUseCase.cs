@@ -46,7 +46,7 @@ public class ApprovalUseCase
 
     public async Task<LeaveRequestApprovalDto> GetByLeaveRequestIdAsync(int leaveRequestId)
     {
-        var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
+        var leaveRequest = await _leaveRepository.GetByIdAsDtoAsync(leaveRequestId);
         if (leaveRequest == null)
         {
             throw new KeyNotFoundException("Leave request not found");
@@ -54,6 +54,20 @@ public class ApprovalUseCase
 
         var requester = await _employeeRepository.GetByIdAsDtoAsync(leaveRequest.EmployeeId);
         var history = await _approvalRepository.GetHistoryByLeaveRequestIdAsync(leaveRequestId);
+
+        var currentEmployeeId = _scopeService.GetEmployeeId();
+        if (!currentEmployeeId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Invalid token");
+        }
+
+        bool isRequester = leaveRequest.EmployeeId == currentEmployeeId.Value;
+        bool isApprover = history.Any(h => h.ApproverId == currentEmployeeId.Value);
+
+        if (!isRequester && !isApprover)
+        {
+            throw new UnauthorizedAccessException("You don't have permission to view this approval");
+        }
 
         var timeline = new List<LeaveApprovalStepDto>();
         foreach (var h in history)
@@ -84,7 +98,7 @@ public class ApprovalUseCase
             StartDate = leaveRequest.StartDate,
             EndDate = leaveRequest.EndDate,
             Days = leaveRequest.Days,
-            Status = leaveRequest.Status.ToString().ToLower(),
+            Status = leaveRequest.Status.ToLower(),
             Reason = leaveRequest.Reason,
             Timeline = timeline
         };
@@ -98,13 +112,13 @@ public class ApprovalUseCase
             throw new KeyNotFoundException("Approval item not found or already processed");
         }
 
-        var leaveRequest = await _leaveRepository.GetByIdAsync(currentItem.LeaveRequestId);
+        var leaveRequest = await _leaveRepository.GetByIdAsDtoAsync(currentItem.LeaveRequestId);
         if (leaveRequest == null)
         {
             throw new KeyNotFoundException("Leave request not found");
         }
 
-        if (leaveRequest.Status != LeaveStatus.Pending)
+        if (leaveRequest.Status.ToLower() != "pending")
         {
             throw new InvalidOperationException("Only pending requests can be approved");
         }
@@ -117,7 +131,11 @@ public class ApprovalUseCase
 
         var roles = _scopeService.GetRoles();
         string approverRole;
-        if (pendingStep.ApproverRole == "HR" && roles.Any(r => r.Equals("HR", StringComparison.OrdinalIgnoreCase)))
+        if (pendingStep.ApproverRole == "Manager" && roles.Any(r => r.Equals("Manager", StringComparison.OrdinalIgnoreCase)))
+        {
+            approverRole = "Manager";
+        }
+        else if (pendingStep.ApproverRole == "HR" && roles.Any(r => r.Equals("HR", StringComparison.OrdinalIgnoreCase)))
         {
             approverRole = "HR";
         }
@@ -146,6 +164,7 @@ public class ApprovalUseCase
 
         string? nextApproverRole = pendingStep.ApproverRole switch
         {
+            "Manager" => null,
             "HeadDepartment" => "HeadDivision",
             "HeadDivision" => "HR",
             "HR" => null,
@@ -223,13 +242,13 @@ public class ApprovalUseCase
             throw new KeyNotFoundException("Approval item not found or already processed");
         }
 
-        var leaveRequest = await _leaveRepository.GetByIdAsync(currentItem.LeaveRequestId);
+        var leaveRequest = await _leaveRepository.GetByIdAsDtoAsync(currentItem.LeaveRequestId);
         if (leaveRequest == null)
         {
             throw new KeyNotFoundException("Leave request not found");
         }
 
-        if (leaveRequest.Status != LeaveStatus.Pending)
+        if (leaveRequest.Status.ToLower() != "pending")
         {
             throw new InvalidOperationException("Only pending requests can be rejected");
         }
@@ -263,7 +282,7 @@ public class ApprovalUseCase
 
     public async Task<LeaveTimelineDto> GetTimelineAsync(int leaveRequestId)
     {
-        var leaveRequest = await _leaveRepository.GetByIdAsync(leaveRequestId);
+        var leaveRequest = await _leaveRepository.GetByIdAsDtoAsync(leaveRequestId);
         if (leaveRequest == null)
         {
             throw new KeyNotFoundException("Leave request not found");
