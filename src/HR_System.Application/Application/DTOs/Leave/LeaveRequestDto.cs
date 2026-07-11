@@ -11,4 +11,6 @@ public class LeaveRequestDto
     public int Days { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? Reason { get; set; }
+    public string? DivisionName { get; set; }
+    public string? DepartmentName { get; set; }
 }

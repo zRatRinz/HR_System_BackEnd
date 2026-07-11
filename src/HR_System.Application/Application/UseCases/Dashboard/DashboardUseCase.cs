@@ -39,8 +39,8 @@ public class DashboardUseCase
             : 0;
         var attendanceRate = await _attendanceRepository.GetAttendanceRateAsync();
 
-        var currentPeriod = DateTime.UtcNow.ToString("yyyy-MM");
-        var monthlyPayroll = await _payrollRepository.GetTotalPayrollForPeriodAsync(currentPeriod);
+        var now = DateTime.UtcNow;
+        var monthlyPayroll = await _payrollRepository.GetTotalPayrollForMonthYearAsync(now.Month, now.Year);
 
         return new DashboardStatsResponse
         {

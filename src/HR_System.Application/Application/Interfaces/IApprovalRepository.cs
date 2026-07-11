@@ -18,4 +18,9 @@ public interface IApprovalRepository
     Task<LeaveApprovalHistory?> GetLatestStepAsync(int leaveRequestId);
     Task<LeaveApprovalHistory?> GetNextWaitingStepAsync(int leaveRequestId);
     Task UpdateHistoryAsync(LeaveApprovalHistory history);
+
+    Task<int> GetPendingCountForApproverAsync(int approverId);
+    Task<int> GetInProgressCountForApproverAsync(int approverId);
+    Task<int> GetThisMonthApprovedCountForApproverAsync(int approverId);
+    Task<int> GetThisMonthRejectedCountForApproverAsync(int approverId);
 }

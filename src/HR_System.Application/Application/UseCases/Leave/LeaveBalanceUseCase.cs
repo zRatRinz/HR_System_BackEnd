@@ -32,13 +32,13 @@ public class LeaveBalanceUseCase
             {
                 Total = annualTotal,
                 Used = usedDays.GetValueOrDefault("Annual", 0),
-                Balance = annualTotal - usedDays.GetValueOrDefault("Annual", 0)
+                Balance = Math.Max(0, annualTotal - usedDays.GetValueOrDefault("Annual", 0))
             },
             Sick = new LeaveBalanceItemDto
             {
                 Total = sickTotal,
                 Used = usedDays.GetValueOrDefault("Sick", 0),
-                Balance = sickTotal - usedDays.GetValueOrDefault("Sick", 0)
+                Balance = Math.Max(0, sickTotal - usedDays.GetValueOrDefault("Sick", 0))
             },
             PendingRequests = pendingRequestsCount,
             LeaveTakenYtd = leaveTakenYtd

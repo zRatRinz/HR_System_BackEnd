@@ -78,15 +78,21 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         return (decimal)onTimeRecords / totalRecords * 100;
     }
 
-    public async Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit)
+    public async Task<List<AttendanceDto>> GetAllAsDtoAsync(DateTime? startDate, DateTime? endDate, int? employeeId, int page, int limit)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
 
-        if (date.HasValue)
+        if (startDate.HasValue)
         {
-            whereClause += " AND CAST(a.Date AS DATE) = CAST(@Date AS DATE)";
-            parameters.Add("Date", date.Value);
+            whereClause += " AND CAST(a.Date AS DATE) >= CAST(@StartDate AS DATE)";
+            parameters.Add("StartDate", startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            whereClause += " AND CAST(a.Date AS DATE) <= CAST(@EndDate AS DATE)";
+            parameters.Add("EndDate", endDate.Value);
         }
 
         if (employeeId.HasValue)
@@ -112,15 +118,21 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         return results.ToList();
     }
 
-    public async Task<(List<AttendanceDto> Items, int Total)> GetAllAsDtoAsync(DateTime? date, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId, string? status)
+    public async Task<(List<AttendanceDto> Items, int Total)> GetAllAsDtoAsync(DateTime? startDate, DateTime? endDate, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, bool bypassScope, int? scopeEmployeeId, string? status)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
 
-        if (date.HasValue)
+        if (startDate.HasValue)
         {
-            whereClause += " AND CAST(a.Date AS DATE) = CAST(@Date AS DATE)";
-            parameters.Add("Date", date.Value);
+            whereClause += " AND CAST(a.Date AS DATE) >= CAST(@StartDate AS DATE)";
+            parameters.Add("StartDate", startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            whereClause += " AND CAST(a.Date AS DATE) <= CAST(@EndDate AS DATE)";
+            parameters.Add("EndDate", endDate.Value);
         }
 
         if (employeeId.HasValue)
@@ -166,9 +178,13 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         var sql = $@"
             SELECT a.AttendanceRecordId, a.EmployeeId, a.Date, a.CheckIn, a.CheckOut,
                    a.Status,
-                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName,
+                   d.DivisionName,
+                   de.DepartmentName
             FROM AttendanceRecords a
             INNER JOIN Employees e ON a.EmployeeId = e.EmployeeId
+            LEFT JOIN Divisions d ON e.DivisionId = d.DivisionId
+            LEFT JOIN Departments de ON e.DepartmentId = de.DepartmentId
             {whereClause}
             ORDER BY a.Date DESC
             OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY";
@@ -180,16 +196,22 @@ public class AttendanceRepository : BaseRepository, IAttendanceRepository
         return (results.ToList(), total);
     }
 
-    public async Task<(List<AttendanceDto> Items, int Total)> GetByEmployeeIdAsync(int employeeId, DateTime? date, int page, int limit)
+    public async Task<(List<AttendanceDto> Items, int Total)> GetByEmployeeIdAsync(int employeeId, DateTime? startDate, DateTime? endDate, int page, int limit)
     {
         var whereClause = "WHERE a.EmployeeId = @EmployeeId";
         var parameters = new DynamicParameters();
         parameters.Add("EmployeeId", employeeId);
 
-        if (date.HasValue)
+        if (startDate.HasValue)
         {
-            whereClause += " AND CAST(a.Date AS DATE) = CAST(@Date AS DATE)";
-            parameters.Add("Date", date.Value);
+            whereClause += " AND CAST(a.Date AS DATE) >= CAST(@StartDate AS DATE)";
+            parameters.Add("StartDate", startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            whereClause += " AND CAST(a.Date AS DATE) <= CAST(@EndDate AS DATE)";
+            parameters.Add("EndDate", endDate.Value);
         }
 
         var countSql = $@"

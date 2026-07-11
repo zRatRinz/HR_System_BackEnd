@@ -38,7 +38,7 @@ public class LeaveUseCase
 
         if (bypassScope)
         {
-            var (dtoItems, dtoTotal) = await _leaveRepository.GetAllAsDtoAsync(status, employeeId, page, limit);
+            var (dtoItems, dtoTotal) = await _leaveRepository.GetAllAsDtoAsync(status, null, null, null, employeeId, page, limit);
             items = dtoItems;
             total = dtoTotal;
         }
@@ -58,7 +58,7 @@ public class LeaveUseCase
         };
     }
 
-    public async Task<LeaveListResponse> GetMyLeavesAsync(string? status, int page, int limit)
+    public async Task<LeaveListResponse> GetMyLeavesAsync(string? status, string? leaveType, DateTime? startDate, DateTime? endDate, int page, int limit)
     {
         var employeeId = _scopeService.GetEmployeeId();
         if (!employeeId.HasValue)
@@ -66,7 +66,7 @@ public class LeaveUseCase
             throw new UnauthorizedAccessException("Employee not found in token");
         }
 
-        var (items, total) = await _leaveRepository.GetAllAsDtoAsync(status, employeeId.Value, page, limit);
+        var (items, total) = await _leaveRepository.GetAllAsDtoAsync(status, leaveType, startDate, endDate, employeeId.Value, page, limit);
         return new LeaveListResponse
         {
             Requests = items,

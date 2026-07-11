@@ -203,4 +203,78 @@ public class ApprovalRepository : BaseRepository, IApprovalRepository
             history.ActionAt
         });
     }
+
+    public async Task<int> GetPendingCountForApproverAsync(int approverId)
+    {
+        var sql = @"
+            SELECT COUNT(DISTINCT lah.LeaveRequestId)
+            FROM LeaveApprovalHistory lah
+            INNER JOIN (
+                SELECT LeaveRequestId, MAX(StepNumber) as MaxStep
+                FROM LeaveApprovalHistory
+                WHERE Status = 'Pending'
+                GROUP BY LeaveRequestId
+            ) pending ON lah.LeaveRequestId = pending.LeaveRequestId AND lah.StepNumber = pending.MaxStep
+            WHERE lah.ApproverId = @ApproverId AND lah.Status = 'Pending'";
+
+        return await ExecuteScalarAsync<int>(sql, new { ApproverId = approverId });
+    }
+
+    public async Task<int> GetInProgressCountForApproverAsync(int approverId)
+    {
+        var sql = @"
+            SELECT COUNT(DISTINCT sub.LeaveRequestId)
+            FROM (
+                SELECT lah.LeaveRequestId, lah.StepNumber,
+                    MAX(CASE WHEN lah.Status = 'Approved' AND lah.ApproverId = @ApproverId THEN 1 ELSE 0 END) as UserApproved,
+                    MAX(CASE WHEN lah.Status = 'Pending' THEN 1 ELSE 0 END) as HasPending
+                FROM LeaveApprovalHistory lah
+                GROUP BY lah.LeaveRequestId, lah.StepNumber
+            ) sub
+            WHERE sub.UserApproved = 1 AND sub.HasPending = 1";
+
+        return await ExecuteScalarAsync<int>(sql, new { ApproverId = approverId });
+    }
+
+    public async Task<int> GetThisMonthApprovedCountForApproverAsync(int approverId)
+    {
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var endOfMonth = startOfMonth.AddMonths(1);
+
+        var sql = @"
+            SELECT COUNT(*)
+            FROM LeaveApprovalHistory
+            WHERE ApproverId = @ApproverId
+              AND Status = 'Approved'
+              AND ActionAt >= @StartOfMonth
+              AND ActionAt < @EndOfMonth";
+
+        return await ExecuteScalarAsync<int>(sql, new
+        {
+            ApproverId = approverId,
+            StartOfMonth = startOfMonth,
+            EndOfMonth = endOfMonth
+        });
+    }
+
+    public async Task<int> GetThisMonthRejectedCountForApproverAsync(int approverId)
+    {
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var endOfMonth = startOfMonth.AddMonths(1);
+
+        var sql = @"
+            SELECT COUNT(*)
+            FROM LeaveApprovalHistory
+            WHERE ApproverId = @ApproverId
+              AND Status = 'Rejected'
+              AND ActionAt >= @StartOfMonth
+              AND ActionAt < @EndOfMonth";
+
+        return await ExecuteScalarAsync<int>(sql, new
+        {
+            ApproverId = approverId,
+            StartOfMonth = startOfMonth,
+            EndOfMonth = endOfMonth
+        });
+    }
 }

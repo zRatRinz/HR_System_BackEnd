@@ -1,5 +1,6 @@
 using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Leave;
+using HR_System.Application.Interfaces;
 using HR_System.Application.UseCases.Leave;
 using HR_System.Api.Filters;
 using Microsoft.AspNetCore.Mvc;
@@ -13,15 +14,18 @@ public class LeaveController : ControllerBase
     private readonly LeaveUseCase _leaveUseCase;
     private readonly LeaveBalanceUseCase _leaveBalanceUseCase;
     private readonly LeaveCalendarUseCase _leaveCalendarUseCase;
+    private readonly ILeaveRepository _leaveRepository;
 
     public LeaveController(
         LeaveUseCase leaveUseCase,
         LeaveBalanceUseCase leaveBalanceUseCase,
-        LeaveCalendarUseCase leaveCalendarUseCase)
+        LeaveCalendarUseCase leaveCalendarUseCase,
+        ILeaveRepository leaveRepository)
     {
         _leaveUseCase = leaveUseCase;
         _leaveBalanceUseCase = leaveBalanceUseCase;
         _leaveCalendarUseCase = leaveCalendarUseCase;
+        _leaveRepository = leaveRepository;
     }
 
     [HttpGet]
@@ -29,10 +33,13 @@ public class LeaveController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<LeaveListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? status,
+        [FromQuery] string? leaveType,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] int page = 1,
         [FromQuery] int limit = 10)
     {
-        var response = await _leaveUseCase.GetMyLeavesAsync(status, page, limit);
+        var response = await _leaveUseCase.GetMyLeavesAsync(status, leaveType, startDate, endDate, page, limit);
         return Ok(ApiResponse<LeaveListResponse>.Success(response));
     }
 
@@ -129,6 +136,12 @@ public class LeaveController : ControllerBase
 
         try
         {
+            var isLocked = await _leaveRepository.IsLeaveLockedAsync(id);
+            if (isLocked)
+            {
+                return BadRequest(ApiResponse.Fail("Cannot cancel this leave request. It has been locked by payroll processing."));
+            }
+
             var result = await _leaveUseCase.CancelAsync(id, userId);
             return Ok(ApiResponse<LeaveRequestDto>.Success(result, "Leave request cancelled"));
         }

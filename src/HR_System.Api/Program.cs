@@ -19,6 +19,7 @@ using HR_System.Application.UseCases.Settings;
 using HR_System.Domain.Entities;
 using HR_System.Infrastructure.Repositories;
 using HR_System.Infrastructure.Services;
+using HR_System.Infrastructure.Services.PdfGenerators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -109,6 +110,14 @@ builder.Services.AddScoped<IScopeService, ScopeService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IPermissionService, PermissionService>();
+
+builder.Services.AddScoped<IEmployeeReportPdfGenerator, EmployeeReportPdfGenerator>();
+builder.Services.AddScoped<IMyAttendanceReportPdfGenerator, MyAttendanceReportPdfGenerator>();
+builder.Services.AddScoped<IAttendanceOverviewReportPdfGenerator, AttendanceOverviewReportPdfGenerator>();
+builder.Services.AddScoped<ILeaveReportPdfGenerator, LeaveReportPdfGenerator>();
+builder.Services.AddScoped<ILeaveOverviewReportPdfGenerator, LeaveOverviewReportPdfGenerator>();
+builder.Services.AddScoped<ILeaveCertificatePdfGenerator, LeaveCertificatePdfGenerator>();
+builder.Services.AddScoped<IPayrollPdfGenerator, PayrollPdfGenerator>();
 
 builder.Services.AddScoped<AuthUseCase>();
 builder.Services.AddScoped<EmployeeUseCase>();

@@ -11,7 +11,7 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
 {
     public PayrollRepository(IConfiguration configuration) : base(configuration) { }
 
-    public async Task<(List<PayrollDto> Items, int Total)> GetAllAsync(string? period, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId)
+    public async Task<(List<PayrollDto> Items, int Total)> GetAllAsync(int? month, int? year, int? employeeId, int page, int limit, int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
@@ -34,13 +34,20 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
             {
                 whereClause += " AND p.EmployeeId IN (SELECT EmployeeId FROM Employees WHERE UserId = @ScopeUserId)";
                 parameters.Add("ScopeUserId", scopeUserId.Value);
+                whereClause += " AND p.Status = 'Approved'";
             }
         }
 
-        if (!string.IsNullOrEmpty(period))
+        if (month.HasValue)
         {
-            whereClause += " AND p.Period = @Period";
-            parameters.Add("Period", period);
+            whereClause += " AND p.Month = @Month";
+            parameters.Add("Month", month.Value);
+        }
+
+        if (year.HasValue)
+        {
+            whereClause += " AND p.Year = @Year";
+            parameters.Add("Year", year.Value);
         }
 
         if (employeeId.HasValue)
@@ -53,14 +60,14 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
         var total = await ExecuteScalarAsync<int>(countSql, parameters);
 
         var dataSql = $@"
-            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Period, p.BasicSalary as BaseSalary,
-                   p.Deduction as Deductions, p.Allowance as Bonuses,
-                   p.NetSalary, p.Status,
+            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary,
+                   p.Deduction, p.Allowance,
+                   p.NetSalary, p.UnpaidLeaveDays, p.Status,
                    (e.FirstName + ' ' + e.LastName) as EmployeeName
             FROM PayrollRecords p
             INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
             {whereClause}
-            ORDER BY p.Period DESC
+            ORDER BY p.Year DESC, p.Month DESC
             OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY";
 
         parameters.Add("Offset", (page - 1) * limit);
@@ -73,19 +80,23 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
     public async Task<PayrollRecord> CreateAsync(PayrollRecord record)
     {
         var sql = @"
-            INSERT INTO PayrollRecords (EmployeeId, Period, BasicSalary, Allowance, Deduction, NetSalary, Status, CreatedAt)
-            VALUES (@EmployeeId, @Period, @BasicSalary, @Allowance, @Deduction, @NetSalary, @Status, @CreatedAt);
+            INSERT INTO PayrollRecords (EmployeeId, Month, Year, Period, BasicSalary, Allowance, Deduction, NetSalary, UnpaidLeaveDays, Status, ProcessedAt, CreatedAt)
+            VALUES (@EmployeeId, @Month, @Year, @Period, @BasicSalary, @Allowance, @Deduction, @NetSalary, @UnpaidLeaveDays, @Status, @ProcessedAt, @CreatedAt);
             SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
         var newId = await ExecuteScalarAsync<int>(sql, new
         {
-            EmployeeId = record.EmployeeId,
+            record.EmployeeId,
+            record.Month,
+            record.Year,
             record.Period,
             record.BasicSalary,
             record.Allowance,
             record.Deduction,
             record.NetSalary,
+            record.UnpaidLeaveDays,
             Status = record.Status.ToString(),
+            record.ProcessedAt,
             CreatedAt = DateTime.UtcNow
         });
 
@@ -98,7 +109,8 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
         var sql = @"
             UPDATE PayrollRecords
             SET BasicSalary = @BasicSalary, Allowance = @Allowance, Deduction = @Deduction,
-                NetSalary = @NetSalary, Status = @Status, ProcessedAt = @ProcessedAt, UpdatedAt = @UpdatedAt
+                NetSalary = @NetSalary, UnpaidLeaveDays = @UnpaidLeaveDays, Status = @Status,
+                ProcessedAt = @ProcessedAt, UpdatedAt = @UpdatedAt
             WHERE PayrollRecordId = @PayrollRecordId";
 
         await ExecuteAsync(sql, new
@@ -108,6 +120,7 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
             record.Allowance,
             record.Deduction,
             record.NetSalary,
+            record.UnpaidLeaveDays,
             Status = record.Status.ToString(),
             record.ProcessedAt,
             UpdatedAt = DateTime.UtcNow
@@ -116,37 +129,43 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
         return record;
     }
 
-    public async Task<List<PayrollDto>> GetByPeriodAsDtoAsync(string period)
+    public async Task<List<PayrollDto>> GetByMonthYearAsDtoAsync(int month, int year)
     {
         var sql = @"
-            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Period, p.BasicSalary as BaseSalary,
-                   p.Deduction as Deductions, p.Allowance as Bonuses,
-                   p.NetSalary, p.Status,
+            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary,
+                   p.Deduction, p.Allowance,
+                   p.NetSalary, p.UnpaidLeaveDays, p.Status,
                    (e.FirstName + ' ' + e.LastName) as EmployeeName
             FROM PayrollRecords p
             INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
-            WHERE p.Period = @Period
+            WHERE p.Month = @Month AND p.Year = @Year
             ORDER BY e.FirstName";
 
-        var results = await QueryAsync<PayrollDto>(sql, new { Period = period });
+        var results = await QueryAsync<PayrollDto>(sql, new { Month = month, Year = year });
         return results.ToList();
     }
 
-    public async Task<decimal> GetTotalPayrollForPeriodAsync(string period)
+    public async Task<decimal> GetTotalPayrollForMonthYearAsync(int month, int year)
     {
-        var sql = "SELECT COALESCE(SUM(NetSalary), 0) FROM PayrollRecords WHERE Period = @Period";
-        return await ExecuteScalarAsync<decimal>(sql, new { Period = period });
+        var sql = "SELECT COALESCE(SUM(NetSalary), 0) FROM PayrollRecords WHERE Month = @Month AND Year = @Year";
+        return await ExecuteScalarAsync<decimal>(sql, new { Month = month, Year = year });
     }
 
-    public async Task<List<PayrollDto>> GetAllAsDtoAsync(string? period, int? employeeId, int page, int limit)
+    public async Task<(List<PayrollDto> Items, int Total)> GetAllAsDtoAsync(int? month, int? year, int? employeeId, int page, int limit)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
 
-        if (!string.IsNullOrEmpty(period))
+        if (month.HasValue)
         {
-            whereClause += " AND p.Period = @Period";
-            parameters.Add("Period", period);
+            whereClause += " AND p.Month = @Month";
+            parameters.Add("Month", month.Value);
+        }
+
+        if (year.HasValue)
+        {
+            whereClause += " AND p.Year = @Year";
+            parameters.Add("Year", year.Value);
         }
 
         if (employeeId.HasValue)
@@ -155,21 +174,90 @@ public class PayrollRepository : BaseRepository, IPayrollRepository
             parameters.Add("EmployeeId", employeeId.Value);
         }
 
+        var countSql = $"SELECT COUNT(*) FROM PayrollRecords p INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId {whereClause}";
+        var total = await ExecuteScalarAsync<int>(countSql, parameters);
+
         var sql = $@"
-            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Period, p.BasicSalary as BaseSalary,
-                   p.Deduction as Deductions, p.Allowance as Bonuses,
-                   p.NetSalary, p.Status,
+            SELECT p.PayrollRecordId, p.EmployeeId, p.Month, p.Year, p.BasicSalary,
+                   p.Deduction, p.Allowance,
+                   p.NetSalary, p.UnpaidLeaveDays, p.Status,
                    (e.FirstName + ' ' + e.LastName) as EmployeeName
             FROM PayrollRecords p
             INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
             {whereClause}
-            ORDER BY p.Period DESC
+            ORDER BY p.Year DESC, p.Month DESC
             OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY";
 
         parameters.Add("Offset", (page - 1) * limit);
         parameters.Add("Limit", limit);
 
         var results = await QueryAsync<PayrollDto>(sql, parameters);
-        return results.ToList();
+        return (results.ToList(), total);
+    }
+
+    public async Task<PayrollDto?> GetByIdAsDtoAsync(int id)
+    {
+        var sql = @"
+            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary,
+                   p.Deduction, p.Allowance,
+                   p.NetSalary, p.UnpaidLeaveDays, p.Status,
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM PayrollRecords p
+            INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
+            WHERE p.PayrollRecordId = @PayrollRecordId";
+
+        return await QuerySingleOrDefaultAsync<PayrollDto>(sql, new { PayrollRecordId = id });
+    }
+
+    public async Task<PayrollDto?> GetByMonthYearEmployeeAsync(int month, int year, int employeeId)
+    {
+        var sql = @"
+            SELECT p.PayrollRecordId as Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary,
+                   p.Deduction, p.Allowance,
+                   p.NetSalary, p.UnpaidLeaveDays, p.Status,
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM PayrollRecords p
+            INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
+            WHERE p.Month = @Month AND p.Year = @Year AND p.EmployeeId = @EmployeeId";
+
+        return await QuerySingleOrDefaultAsync<PayrollDto>(sql, new { Month = month, Year = year, EmployeeId = employeeId });
+    }
+
+    public async Task DeleteByMonthYearAsync(int month, int year)
+    {
+        var sql = "DELETE FROM PayrollRecords WHERE Month = @Month AND Year = @Year";
+        await ExecuteAsync(sql, new { Month = month, Year = year });
+    }
+
+    public async Task ApproveAsync(int month, int year)
+    {
+        var sql = "UPDATE PayrollRecords SET Status = 'Approved' WHERE Month = @Month AND Year = @Year";
+        await ExecuteAsync(sql, new { Month = month, Year = year });
+    }
+
+    public async Task<int> ApproveByIdsAsync(List<int> payrollRecordIds)
+    {
+        if (!payrollRecordIds.Any())
+            return 0;
+
+        var sql = @"UPDATE PayrollRecords
+                    SET Status = 'Approved'
+                    WHERE PayrollRecordId IN @Ids";
+        return await ExecuteAsync(sql, new { Ids = payrollRecordIds });
+    }
+
+    public async Task<PayrollDetailDto?> GetDetailAsync(int month, int year, int employeeId)
+    {
+        var sql = @"
+            SELECT p.PayrollRecordId, p.EmployeeId, p.Month, p.Year, p.Period,
+                   p.BasicSalary, p.Allowance, p.Deduction, p.NetSalary,
+                   p.UnpaidLeaveDays, p.Status,
+                   (e.FirstName + ' ' + e.LastName) as EmployeeName
+            FROM PayrollRecords p
+            INNER JOIN Employees e ON p.EmployeeId = e.EmployeeId
+            WHERE p.Month = @Month AND p.Year = @Year AND p.EmployeeId = @EmployeeId";
+
+        return await QuerySingleOrDefaultAsync<PayrollDetailDto>(sql,
+            new { Month = month, Year = year, EmployeeId = employeeId });
     }
 }

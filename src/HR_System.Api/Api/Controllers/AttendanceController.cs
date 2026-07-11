@@ -23,11 +23,12 @@ public class AttendanceController : ControllerBase
     [RequirePermission("attendance.view")]
     [ProducesResponseType(typeof(ApiResponse<AttendanceListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
-        [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] int page = 1,
         [FromQuery] int limit = 10)
     {
-        var response = await _attendanceUseCase.GetMyAttendanceAsync(date, page, limit);
+        var response = await _attendanceUseCase.GetMyAttendanceAsync(startDate, endDate, page, limit);
         return Ok(ApiResponse<AttendanceListResponse>.Success(response));
     }
 
@@ -35,7 +36,8 @@ public class AttendanceController : ControllerBase
     [RequirePermission("attendance.view_overview")]
     [ProducesResponseType(typeof(ApiResponse<AttendanceListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllOverview(
-        [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] int? employeeId,
         [FromQuery] string? status,
         [FromQuery] int? divisionId,
@@ -44,7 +46,7 @@ public class AttendanceController : ControllerBase
         [FromQuery] int limit = 10)
     {
         var response = await _attendanceUseCase.GetTeamAttendanceAsync(
-            date, employeeId, status, divisionId, departmentId, page, limit);
+            startDate, endDate, employeeId, status, divisionId, departmentId, page, limit);
         return Ok(ApiResponse<AttendanceListResponse>.Success(response));
     }
 

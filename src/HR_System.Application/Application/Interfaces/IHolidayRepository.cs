@@ -6,4 +6,5 @@ public interface IHolidayRepository
 {
     Task<List<Holiday>> GetByYearAsync(int year);
     Task<List<Holiday>> GetAllAsync();
+    Task<int> CountHolidaysInRangeAsync(DateTime startDate, DateTime endDate);
 }

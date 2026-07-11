@@ -316,4 +316,26 @@ public class ApprovalUseCase
             Steps = steps
         };
     }
+
+    public async Task<ApprovalStatisticsDto> GetStatisticsAsync()
+    {
+        var employeeId = _scopeService.GetEmployeeId();
+        if (!employeeId.HasValue)
+        {
+            return new ApprovalStatisticsDto();
+        }
+
+        var pending = await _approvalRepository.GetPendingCountForApproverAsync(employeeId.Value);
+        var inProgress = await _approvalRepository.GetInProgressCountForApproverAsync(employeeId.Value);
+        var thisMonthApproved = await _approvalRepository.GetThisMonthApprovedCountForApproverAsync(employeeId.Value);
+        var thisMonthRejected = await _approvalRepository.GetThisMonthRejectedCountForApproverAsync(employeeId.Value);
+
+        return new ApprovalStatisticsDto
+        {
+            Pending = pending,
+            InProgress = inProgress,
+            ThisMonthApproved = thisMonthApproved,
+            ThisMonthRejected = thisMonthRejected
+        };
+    }
 }

@@ -32,4 +32,17 @@ public class HolidayRepository : BaseRepository, IHolidayRepository
         var results = await QueryAsync<Holiday>(sql);
         return results.ToList();
     }
+
+    public async Task<int> CountHolidaysInRangeAsync(DateTime startDate, DateTime endDate)
+    {
+        var sql = @"
+            SELECT COUNT(*)
+            FROM Holidays
+            WHERE (HolidayDate BETWEEN @StartDate AND @EndDate)
+               OR (IsRecurring = 1 
+                   AND MONTH(HolidayDate) BETWEEN MONTH(@StartDate) AND MONTH(@EndDate)
+                   AND DAY(HolidayDate) BETWEEN DAY(@StartDate) AND DAY(@EndDate))";
+
+        return await ExecuteScalarAsync<int>(sql, new { StartDate = startDate, EndDate = endDate });
+    }
 }

@@ -21,7 +21,7 @@ public class AttendanceUseCase
         _scopeService = scopeService;
     }
 
-    public async Task<AttendanceListResponse> GetAllAsync(DateTime? date, int? employeeId, int page, int limit)
+    public async Task<AttendanceListResponse> GetAllAsync(DateTime? startDate, DateTime? endDate, int? employeeId, int page, int limit)
     {
         var roles = _scopeService.GetRoles();
         var bypassScope = roles.Any(r => r == "Admin" || r == "HR");
@@ -45,7 +45,7 @@ public class AttendanceUseCase
         }
 
         var (items, total) = await _attendanceRepository.GetAllAsDtoAsync(
-            date, employeeId, page, limit,
+            startDate, endDate, employeeId, page, limit,
             divisionId, departmentId, bypassScope,
             scopeEmployeeId, null);
 
@@ -57,7 +57,7 @@ public class AttendanceUseCase
         };
     }
 
-    public async Task<AttendanceListResponse> GetMyAttendanceAsync(DateTime? date, int page, int limit)
+    public async Task<AttendanceListResponse> GetMyAttendanceAsync(DateTime? startDate, DateTime? endDate, int page, int limit)
     {
         var employeeId = _scopeService.GetEmployeeId();
         if (!employeeId.HasValue)
@@ -65,7 +65,7 @@ public class AttendanceUseCase
             throw new UnauthorizedAccessException("Employee not found in token");
         }
 
-        var (items, total) = await _attendanceRepository.GetByEmployeeIdAsync(employeeId.Value, date, page, limit);
+        var (items, total) = await _attendanceRepository.GetByEmployeeIdAsync(employeeId.Value, startDate, endDate, page, limit);
 
         return new AttendanceListResponse
         {
@@ -76,7 +76,8 @@ public class AttendanceUseCase
     }
 
     public async Task<AttendanceListResponse> GetTeamAttendanceAsync(
-        DateTime? date,
+        DateTime? startDate,
+        DateTime? endDate,
         int? employeeId,
         string? status,
         int? divisionId,
@@ -116,7 +117,7 @@ public class AttendanceUseCase
         }
 
         var (items, total) = await _attendanceRepository.GetAllAsDtoAsync(
-            date, employeeId, page, limit,
+            startDate, endDate, employeeId, page, limit,
             scopeDivisionId, scopeDepartmentId, bypassScope,
             null, status);
 

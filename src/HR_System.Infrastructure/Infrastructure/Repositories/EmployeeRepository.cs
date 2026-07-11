@@ -342,12 +342,12 @@ public class EmployeeRepository : BaseRepository, IEmployeeRepository
         return (await QueryAsync<EmployeeSearchDto>(sql, new { Query = $"%{query}%" })).ToList();
     }
 
-    public async Task<List<int>> GetAllIdsAsync(int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId)
+    public async Task<List<int>> GetAllIdsAsync(int? scopeDivisionId, int? scopeDepartmentId, string? role, int? scopeUserId, List<string>? roles = null)
     {
         var whereClause = "WHERE 1=1";
         var parameters = new DynamicParameters();
 
-        var bypassScope = role == "Admin" || role == "HR";
+        var bypassScope = roles != null && roles.Contains("HR");
 
         if (!bypassScope)
         {

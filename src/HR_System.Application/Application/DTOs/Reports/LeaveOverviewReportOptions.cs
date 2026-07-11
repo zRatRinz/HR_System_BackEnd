@@ -1,0 +1,11 @@
+namespace HR_System.Application.DTOs.Reports;
+
+public class LeaveOverviewReportOptions
+{
+    public string? DivisionName { get; set; }
+    public string? DepartmentName { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public DateTime GeneratedAt { get; set; }
+    public string ScopeDisplay { get; set; } = "ทั้งหมด";
+}

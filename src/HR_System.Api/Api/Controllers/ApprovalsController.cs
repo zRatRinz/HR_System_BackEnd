@@ -131,4 +131,15 @@ public class ApprovalsController : ControllerBase
             return NotFound(ApiResponse.Fail(ex.Message));
         }
     }
+
+    [HttpGet("statistics")]
+    [RequirePermission("leaves.approve")]
+    [ProducesResponseType(typeof(ApiResponse<ApprovalStatisticsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetStatistics()
+    {
+        var stats = await _approvalUseCase.GetStatisticsAsync();
+        return Ok(ApiResponse<ApprovalStatisticsDto>.Success(stats));
+    }
 }

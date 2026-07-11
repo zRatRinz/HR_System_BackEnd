@@ -7,13 +7,27 @@ public class PermissionService : IPermissionService
 {
     public string[] GetPermissionsForRole(UserRole role) => role switch
     {
-        UserRole.Admin => Permissions.All,
+        UserRole.Admin => new[]
+        {
+            Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit, Permissions.EmployeesDelete,
+            Permissions.LeavesView, Permissions.LeavesViewOverview, Permissions.LeavesCreate, Permissions.LeavesApprove,
+            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceEdit, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
+            Permissions.PositionsView, Permissions.PositionsCreate, Permissions.PositionsEdit,
+            Permissions.RolesView,
+            Permissions.SettingsView, Permissions.SettingsEdit,
+            Permissions.ReportsView,
+            Permissions.PayrollView,
+            Permissions.DivisionsView, Permissions.DepartmentsView,
+            Permissions.DashboardView, Permissions.DashboardViewAll,
+            Permissions.UsersManage
+        },
         UserRole.Manager => new[]
         {
             Permissions.EmployeesView,
             Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
             Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
             Permissions.DashboardView,
+            Permissions.PayrollView,
             Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
         },
         UserRole.HeadDivision => new[]
@@ -22,8 +36,10 @@ public class PermissionService : IPermissionService
             Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
             Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
             Permissions.DashboardView,
+            Permissions.PayrollView,
             Permissions.DivisionsView, Permissions.DepartmentsView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
+            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView,
+            Permissions.ReportsView
         },
         UserRole.HeadDepartment => new[]
         {
@@ -31,15 +47,17 @@ public class PermissionService : IPermissionService
             Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
             Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
             Permissions.DashboardView,
+            Permissions.PayrollView,
             Permissions.DivisionsView, Permissions.DepartmentsView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
+            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView,
+            Permissions.ReportsView
         },
         UserRole.HR => new[]
         {
             Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit,
             Permissions.LeavesView, Permissions.LeavesViewOverview,
             Permissions.AttendanceView, Permissions.AttendanceViewOverview,
-            Permissions.PayrollView, Permissions.DashboardView,
+            Permissions.PayrollView, Permissions.PayrollProcess, Permissions.DashboardView,
             Permissions.PositionsView, Permissions.PositionsCreate, Permissions.PositionsEdit,
             Permissions.RolesView, Permissions.SettingsView,
             Permissions.DivisionsView, Permissions.DepartmentsView
@@ -54,7 +72,8 @@ public class PermissionService : IPermissionService
             Permissions.LeavesView, Permissions.LeavesCreate,
             Permissions.AttendanceView, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
             Permissions.DashboardView,
-            Permissions.SettingsView
+            Permissions.SettingsView,
+            Permissions.PayrollView
         },
         _ => Array.Empty<string>()
     };
