@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Settings;
 using HR_System.Application.UseCases.Settings;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class SettingsController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("settings.view")]
+    [RequirePermission(Permissions.SettingsView)]
     [ProducesResponseType(typeof(ApiResponse<SettingsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get()
@@ -28,7 +29,7 @@ public class SettingsController : ControllerBase
     }
 
     [HttpPut]
-    [RequirePermission("settings.edit")]
+    [RequirePermission(Permissions.SettingsEdit)]
     [ProducesResponseType(typeof(ApiResponse<SettingsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]

@@ -3,6 +3,7 @@ using HR_System.Application.DTOs.Reports;
 using HR_System.Application.Interfaces;
 using HR_System.Application.UseCases.Reports;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -19,7 +20,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("{type}")]
-    [RequirePermission("reports.view")]
+    [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -42,7 +43,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("employees/pdf")]
-    [RequirePermission("reports.view")]
+    [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetEmployeeReportPdf(
@@ -63,7 +64,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("my-attendance/pdf")]
-    [RequirePermission("attendance.view")]
+    [RequirePermission(Permissions.AttendanceView)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetMyAttendancePdf(
@@ -82,7 +83,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("attendance-overview/pdf")]
-    [RequirePermission("attendance.view_overview")]
+    [RequirePermission(Permissions.AttendanceViewOverview)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetAttendanceOverviewPdf(
@@ -104,7 +105,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("my-leave/pdf")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetMyLeavePdf(
@@ -123,7 +124,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("leave-overview/pdf")]
-    [RequirePermission("leaves.view_overview")]
+    [RequirePermission(Permissions.LeavesViewOverview)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetLeaveOverviewPdf(
@@ -142,7 +143,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("leave-certificate/{leaveRequestId}/pdf")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -160,7 +161,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("payroll/{id}/pdf")]
-    [RequirePermission("payroll.view")]
+    [RequirePermission(Permissions.PayrollView)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPayrollPdf(int id)

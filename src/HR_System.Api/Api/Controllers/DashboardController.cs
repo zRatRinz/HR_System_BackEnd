@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Dashboard;
 using HR_System.Application.UseCases.Dashboard;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("stats")]
-    [RequirePermission("dashboard.view")]
+    [RequirePermission(Permissions.DashboardView)]
     [ProducesResponseType(typeof(ApiResponse<DashboardStatsResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetStats()
@@ -47,7 +48,7 @@ public class DashboardController : ControllerBase
     //}
 
     [HttpGet("departments")]
-    [RequirePermission("dashboard.view")]
+    [RequirePermission(Permissions.DashboardView)]
     [ProducesResponseType(typeof(ApiResponse<List<DepartmentData>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDepartments()

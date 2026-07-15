@@ -1,82 +1,48 @@
 using HR_System.Application.Interfaces;
 using HR_System.Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HR_System.Infrastructure.Services;
 
 public class PermissionService : IPermissionService
 {
-    public string[] GetPermissionsForRole(UserRole role) => role switch
+    private readonly Dictionary<UserRole, string[]> _permissionsByRole;
+    private readonly IPermissionRepository _permissionRepository;
+
+    public PermissionService(IServiceProvider serviceProvider)
     {
-        UserRole.Admin => new[]
+        using var scope = serviceProvider.CreateScope();
+        _permissionRepository = scope.ServiceProvider.GetRequiredService<IPermissionRepository>();
+        _permissionsByRole = LoadPermissions().GetAwaiter().GetResult();
+    }
+
+    private async Task<Dictionary<UserRole, string[]>> LoadPermissions()
+    {
+        var dbPermissions = await _permissionRepository.GetPermissionsByRoleIdAsync();
+        var result = new Dictionary<UserRole, string[]>();
+
+        foreach (UserRole role in Enum.GetValues<UserRole>())
         {
-            Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit, Permissions.EmployeesDelete,
-            Permissions.LeavesView, Permissions.LeavesViewOverview, Permissions.LeavesCreate, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceEdit, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
-            Permissions.PositionsView, Permissions.PositionsCreate, Permissions.PositionsEdit,
-            Permissions.RolesView,
-            Permissions.SettingsView, Permissions.SettingsEdit,
-            Permissions.ReportsView,
-            Permissions.PayrollView,
-            Permissions.DivisionsView, Permissions.DepartmentsView,
-            Permissions.DashboardView, Permissions.DashboardViewAll,
-            Permissions.UsersManage
-        },
-        UserRole.Manager => new[]
-        {
-            Permissions.EmployeesView,
-            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
-            Permissions.DashboardView,
-            Permissions.PayrollView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView
-        },
-        UserRole.HeadDivision => new[]
-        {
-            Permissions.EmployeesView, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
-            Permissions.DashboardView,
-            Permissions.PayrollView,
-            Permissions.DivisionsView, Permissions.DepartmentsView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView,
-            Permissions.ReportsView
-        },
-        UserRole.HeadDepartment => new[]
-        {
-            Permissions.EmployeesView, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.LeavesCreate, Permissions.LeavesViewOverview, Permissions.LeavesApprove,
-            Permissions.AttendanceView, Permissions.AttendanceViewOverview, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
-            Permissions.DashboardView,
-            Permissions.PayrollView,
-            Permissions.DivisionsView, Permissions.DepartmentsView,
-            Permissions.PositionsView, Permissions.RolesView, Permissions.SettingsView,
-            Permissions.ReportsView
-        },
-        UserRole.HR => new[]
-        {
-            Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit,
-            Permissions.LeavesView, Permissions.LeavesViewOverview,
-            Permissions.AttendanceView, Permissions.AttendanceViewOverview,
-            Permissions.PayrollView, Permissions.PayrollProcess, Permissions.DashboardView,
-            Permissions.PositionsView, Permissions.PositionsCreate, Permissions.PositionsEdit,
-            Permissions.RolesView, Permissions.SettingsView,
-            Permissions.DivisionsView, Permissions.DepartmentsView
-        },
-        UserRole.Audit => new[]
-        {
-            Permissions.PayrollView, Permissions.DashboardViewAll,
-            Permissions.ReportsView, Permissions.SettingsView
-        },
-        UserRole.Employee => new[]
-        {
-            Permissions.LeavesView, Permissions.LeavesCreate,
-            Permissions.AttendanceView, Permissions.AttendanceCheckIn, Permissions.AttendanceCheckOut,
-            Permissions.DashboardView,
-            Permissions.SettingsView,
-            Permissions.PayrollView
-        },
-        _ => Array.Empty<string>()
-    };
+            var roleId = (int)role + 1;
+            if (dbPermissions.TryGetValue(roleId, out var perms))
+            {
+                result[role] = perms;
+            }
+            else
+            {
+                result[role] = Array.Empty<string>();
+            }
+        }
+
+        return result;
+    }
+
+    public string[] GetPermissionsForRole(UserRole role)
+    {
+        return _permissionsByRole.TryGetValue(role, out var permissions)
+            ? permissions
+            : Array.Empty<string>();
+    }
 
     public string[] GetPermissionsForRoles(IEnumerable<UserRole> roles)
     {

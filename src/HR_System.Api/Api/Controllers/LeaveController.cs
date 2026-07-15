@@ -3,6 +3,7 @@ using HR_System.Application.DTOs.Leave;
 using HR_System.Application.Interfaces;
 using HR_System.Application.UseCases.Leave;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -29,7 +30,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? status,
@@ -44,7 +45,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet("overview")]
-    [RequirePermission("leaves.view_overview")]
+    [RequirePermission(Permissions.LeavesViewOverview)]
     [ProducesResponseType(typeof(ApiResponse<LeaveListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllOverview(
         [FromQuery] string? status,
@@ -59,7 +60,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpPost]
-    [RequirePermission("leaves.create")]
+    [RequirePermission(Permissions.LeavesCreate)]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -78,7 +79,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission(Permissions.LeavesApprove)]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -90,7 +91,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet("balance")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveBalanceDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBalance()
     {
@@ -107,7 +108,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet("calendar")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveCalendarDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCalendar([FromQuery] int? month = null, [FromQuery] int? year = null)
     {
@@ -120,7 +121,7 @@ public class LeaveController : ControllerBase
     }
 
     [HttpPut("requests/{id}/cancel")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]

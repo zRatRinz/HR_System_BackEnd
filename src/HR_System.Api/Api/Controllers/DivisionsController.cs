@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Division;
 using HR_System.Application.UseCases.Division;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class DivisionsController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("divisions.view")]
+    [RequirePermission(Permissions.DivisionsView)]
     [ProducesResponseType(typeof(ApiResponse<List<DivisionDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
@@ -27,7 +28,7 @@ public class DivisionsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [RequirePermission("divisions.view")]
+    [RequirePermission(Permissions.DivisionsView)]
     [ProducesResponseType(typeof(ApiResponse<DivisionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)

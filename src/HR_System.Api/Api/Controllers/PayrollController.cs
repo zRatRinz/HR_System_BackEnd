@@ -3,6 +3,7 @@ using HR_System.Application.DTOs.Payroll;
 using HR_System.Application.Interfaces;
 using HR_System.Application.UseCases.Payroll;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -23,7 +24,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpGet("my")]
-    [RequirePermission("payroll.view")]
+    [RequirePermission(Permissions.PayrollView)]
     [ProducesResponseType(typeof(ApiResponse<PayrollListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetMyPayroll(
@@ -43,7 +44,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpGet("overview")]
-    [RequirePermission("payroll.process")]
+    [RequirePermission(Permissions.PayrollProcess)]
     [ProducesResponseType(typeof(ApiResponse<PayrollListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetOverview(
         [FromQuery] int month,
@@ -57,7 +58,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpGet("{month}/{year}/{employeeId}")]
-    [RequirePermission("payroll.view")]
+    [RequirePermission(Permissions.PayrollView)]
     [ProducesResponseType(typeof(ApiResponse<PayrollDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -79,7 +80,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("process")]
-    [RequirePermission("payroll.process")]
+    [RequirePermission(Permissions.PayrollProcess)]
     [ProducesResponseType(typeof(ApiResponse<ProcessPayrollResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -98,7 +99,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("unlock")]
-    [RequirePermission("payroll.process")]
+    [RequirePermission(Permissions.PayrollProcess)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -117,7 +118,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpPost("{month}/{year}/approve")]
-    [RequirePermission("payroll.process")]
+    [RequirePermission(Permissions.PayrollProcess)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]

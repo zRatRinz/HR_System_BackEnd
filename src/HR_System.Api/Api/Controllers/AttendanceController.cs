@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Attendance;
 using HR_System.Application.UseCases.Attendance;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -20,7 +21,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("attendance.view")]
+    [RequirePermission(Permissions.AttendanceView)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] DateTime? startDate,
@@ -33,7 +34,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpGet("overview")]
-    [RequirePermission("attendance.view_overview")]
+    [RequirePermission(Permissions.AttendanceViewOverview)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceListResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllOverview(
         [FromQuery] DateTime? startDate,
@@ -51,7 +52,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpPost("checkin")]
-    [RequirePermission("attendance.checkin")]
+    [RequirePermission(Permissions.AttendanceCheckIn)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -62,7 +63,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpPost("checkout")]
-    [RequirePermission("attendance.checkout")]
+    [RequirePermission(Permissions.AttendanceCheckOut)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -73,7 +74,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpGet("status/today")]
-    [RequirePermission("attendance.view")]
+    [RequirePermission(Permissions.AttendanceView)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceStatusResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTodayStatus()
     {
@@ -82,7 +83,7 @@ public class AttendanceController : ControllerBase
     }
 
     [HttpGet("today-stats")]
-    [RequirePermission("attendance.view")]
+    [RequirePermission(Permissions.AttendanceView)]
     [ProducesResponseType(typeof(ApiResponse<AttendanceTodayStatsDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTodayStats()
     {

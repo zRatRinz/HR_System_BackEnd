@@ -3,6 +3,7 @@ using HR_System.Application.DTOs.Approval;
 using HR_System.Application.DTOs.Leave;
 using HR_System.Application.UseCases.Approval;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -19,7 +20,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission(Permissions.LeavesApprove)]
     [ProducesResponseType(typeof(ApiResponse<ApprovalListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
@@ -30,7 +31,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpGet("{leaveRequestId:int}")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveRequestApprovalDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
@@ -53,7 +54,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpPut("{id}/approve")]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission(Permissions.LeavesApprove)]
     [ProducesResponseType(typeof(ApiResponse<ApprovalResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -84,7 +85,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpPut("{id}/reject")]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission(Permissions.LeavesApprove)]
     [ProducesResponseType(typeof(ApiResponse<ApprovalResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -115,7 +116,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpGet("{leaveRequestId}/timeline")]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<LeaveTimelineDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -133,7 +134,7 @@ public class ApprovalsController : ControllerBase
     }
 
     [HttpGet("statistics")]
-    [RequirePermission("leaves.approve")]
+    [RequirePermission(Permissions.LeavesApprove)]
     [ProducesResponseType(typeof(ApiResponse<ApprovalStatisticsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]

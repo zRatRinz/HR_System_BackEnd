@@ -103,6 +103,7 @@ builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IDivisionRepository, DivisionRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IHolidayRepository, HolidayRepository>();
+builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();

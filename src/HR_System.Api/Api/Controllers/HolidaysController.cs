@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Holiday;
 using HR_System.Application.UseCases.Holiday;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class HolidaysController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("leaves.view")]
+    [RequirePermission(Permissions.LeavesView)]
     [ProducesResponseType(typeof(ApiResponse<HolidayListDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int? year)
     {

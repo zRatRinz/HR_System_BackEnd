@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Employee;
 using HR_System.Application.UseCases.Employee;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("employees.view")]
+    [RequirePermission(Permissions.EmployeesView)]
     [ProducesResponseType(typeof(ApiResponse<EmployeeListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -36,7 +37,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [RequirePermission("employees.view")]
+    [RequirePermission(Permissions.EmployeesView)]
     [ProducesResponseType(typeof(ApiResponse<EmployeeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -47,7 +48,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet("search")]
-    [RequirePermission("employees.view")]
+    [RequirePermission(Permissions.EmployeesView)]
     public async Task<IActionResult> Search([FromQuery] string q)
     {
         if (string.IsNullOrWhiteSpace(q))
@@ -58,7 +59,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPost]
-    [RequirePermission("employees.create")]
+    [RequirePermission(Permissions.EmployeesCreate)]
     [ProducesResponseType(typeof(ApiResponse<EmployeeDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -70,7 +71,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPatch("{id}")]
-    [RequirePermission("employees.edit")]
+    [RequirePermission(Permissions.EmployeesEdit)]
     [ProducesResponseType(typeof(ApiResponse<EmployeeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -94,7 +95,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [RequirePermission("employees.delete")]
+    [RequirePermission(Permissions.EmployeesDelete)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]

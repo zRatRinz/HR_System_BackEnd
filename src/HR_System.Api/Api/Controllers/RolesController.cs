@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Role;
 using HR_System.Application.UseCases.Role;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("roles.view")]
+    [RequirePermission(Permissions.RolesView)]
     [ProducesResponseType(typeof(ApiResponse<List<RoleDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {

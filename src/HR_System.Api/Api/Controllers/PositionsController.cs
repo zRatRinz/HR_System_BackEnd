@@ -2,6 +2,7 @@ using HR_System.Api.Api.Common;
 using HR_System.Application.DTOs.Position;
 using HR_System.Application.UseCases.Position;
 using HR_System.Api.Filters;
+using HR_System.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR_System.Api.Controllers;
@@ -18,7 +19,7 @@ public class PositionsController : ControllerBase
     }
 
     [HttpGet]
-    [RequirePermission("positions.view")]
+    [RequirePermission(Permissions.PositionsView)]
     [ProducesResponseType(typeof(ApiResponse<List<PositionDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
@@ -27,7 +28,7 @@ public class PositionsController : ControllerBase
     }
 
     [HttpGet("active")]
-    [RequirePermission("positions.view")]
+    [RequirePermission(Permissions.PositionsView)]
     [ProducesResponseType(typeof(ApiResponse<List<PositionDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActive()
     {
@@ -36,7 +37,7 @@ public class PositionsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [RequirePermission("positions.view")]
+    [RequirePermission(Permissions.PositionsView)]
     [ProducesResponseType(typeof(ApiResponse<PositionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
@@ -46,7 +47,7 @@ public class PositionsController : ControllerBase
     }
 
     [HttpPost]
-    [RequirePermission("positions.create")]
+    [RequirePermission(Permissions.PositionsCreate)]
     [ProducesResponseType(typeof(ApiResponse<PositionDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -58,7 +59,7 @@ public class PositionsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [RequirePermission("positions.edit")]
+    [RequirePermission(Permissions.PositionsEdit)]
     [ProducesResponseType(typeof(ApiResponse<PositionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
